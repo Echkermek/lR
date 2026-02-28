@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learn Remote - Раздел теста</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <style>
+    body { padding-top: 80px; background-color: #f8f9fa; }
+    .btn-primary { background-color: #17a2b8; border-color: #17a2b8; }
+    .question-item { 
+      padding: 12px; 
+      background: #f8f9fa; 
+      margin: 8px 0; 
+      border-left: 3px solid #28a745;
+    }
+    .badge-custom { background-color: #17a2b8; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-md navbar-light bg-light fixed-top">
+    <a class="navbar-brand font-weight-bold" href="./courses.html">Learn Remote</a>
+    <div class="navbar-nav mr-auto">
+      <a class="nav-link" href="./courses.html">Курсы</a>
+      <a class="nav-link" href="./groups.html">Группы</a>
+      <a class="nav-link" href="./notifications.html">Уведомления</a>
+      <a class="nav-link" href="./material.html">Материалы</a>
+      <a class="nav-link active" href="./admin.html">Админ</a>
+    </div>
+    <div class="navbar-text mr-3">
+      <strong id="teacherName"></strong>
+    </div>
+    <a class="nav-link text-danger font-weight-bold" href="#" onclick="logout()">Exit</a>
+  </nav>
+
+  <div class="container">
+    <button class="btn btn-secondary mb-3" onclick="history.back()">Назад</button>
+    
+    <h3 id="partTitle" class="mb-4">Раздел: Загрузка...</h3>
+    
+    <div class="card mb-4">
+      <div class="card-header bg-info text-white">
+        <h5 class="mb-0">Вопросы в этом разделе</h5>
+      </div>
+      <div class="card-body">
+        <div id="questionsContainer">
+          <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+              <span class="sr-only">Загрузка...</span>
+            </div>
+            <p class="mt-2">Загрузка вопросов...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-center">
+      <button class="btn btn-primary" data-toggle="modal" data-target="#addQuestionModal">
+        Добавить вопрос
+      </button>
+    </div>
+  </div>
+
+  <!-- Модалка для добавления вопроса -->
+  <div class="modal fade" id="addQuestionModal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Новый вопрос</h5>
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="newQuestionText">Текст вопроса:</label>
+            <input type="text" id="newQuestionText" class="form-control" placeholder="Введите текст вопроса" required>
+          </div>
+          <div class="form-group">
+            <label for="newQuestionContent">Подсказка / инструкция (опционально):</label>
+            <input type="text" id="newQuestionContent" class="form-control" placeholder="Дополнительная информация">
+          </div>
+          <div class="form-check">
+            <input type="checkbox" id="enterAnswer" class="form-check-input">
+            <label class="form-check-label" for="enterAnswer">Ответ в виде текста/ссылки</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Отмена</button>
+          <button class="btn btn-primary" onclick="addQuestion()">Добавить вопрос</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD2QJQcuUI9lCJP_kqp5tW24J8TN6phPWw",
+      authDomain: "prob1-5c047.firebaseapp.com",
+      projectId: "prob1-5c047",
+      storageBucket: "prob1-5c047.appspot.com",
+      messagingSenderId: "1083579621866",
+      appId: "1:1083579621866:web:73f214d8fd992f0d52d293"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    if (!localStorage.getItem('teacherId')) {
+      window.location.href = './login.html';
+    }
+
+    function logout() {
+      localStorage.removeItem('teacherId');
+      window.location.href = './login.html';
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const testId = urlParams.get('test_id');
+    const partId = urlParams.get('part_id');
+
+    if (!testId || !partId) {
+      alert("Ошибка: не передан test_id или part_id");
+      history.back();
+    }
+
+    db.collection("tests").doc(testId).collection("parts").doc(partId).onSnapshot(doc => {
+      if (doc.exists) {
+        const data = doc.data();
+        document.getElementById("partTitle").textContent = 
+          `Раздел: ${data.title} (Часть ${data.num})`;
+      } else {
+        document.getElementById("partTitle").textContent = "Раздел не найден";
+      }
+    });
+
+    const questionsRef = db.collection("tests").doc(testId).collection("parts").doc(partId).collection("questions");
+    
+    questionsRef.orderBy("num").onSnapshot(snap => {
+      const container = document.getElementById("questionsContainer");
+      container.innerHTML = "";
+      
+      if (snap.empty) {
+        container.innerHTML = "<p class='text-muted text-center'>Вопросов пока нет</p>";
+        return;
+      }
+
+      let questionNumber = 1;
+      snap.forEach(qDoc => {
+        const q = qDoc.data();
+        const div = document.createElement("div");
+        div.className = "question-item";
+        div.innerHTML = `
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="flex-grow-1">
+              <strong>Вопрос ${questionNumber}:</strong> ${q.text || "Без текста"}<br>
+              ${q.content ? `<small class="text-muted">${q.content}</small><br>` : ""}
+              ${q.enterAnswer ? `<span class="badge badge-custom text-white mt-1">Ответ текстом/ссылкой</span>` : ""}
+            </div>
+            <button class="btn btn-danger btn-sm ml-3" onclick="deleteQuestion('${qDoc.id}')">Удалить</button>
+          </div>
+        `;
+        container.appendChild(div);
+        questionNumber++;
+      });
+    });
+
+    function addQuestion() {
+      const text = document.getElementById("newQuestionText").value.trim();
+      const content = document.getElementById("newQuestionContent").value.trim();
+      const enterAnswer = document.getElementById("enterAnswer").checked;
+
+      if (!text) {
+        alert("Введите текст вопроса");
+        return;
+      }
+
+      const addBtn = document.querySelector('#addQuestionModal .btn-primary');
+      const originalText = addBtn.innerHTML;
+      addBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Добавление...';
+      addBtn.disabled = true;
+
+      questionsRef.add({
+        text: text,
+        content: content || "",
+        enterAnswer: enterAnswer,
+        lecId: "",
+        num: Date.now(),
+        testId: testId
+      }).then(() => {
+        $('#addQuestionModal').modal('hide');
+        document.getElementById("newQuestionText").value = "";
+        document.getElementById("newQuestionContent").value = "";
+        document.getElementById("enterAnswer").checked = false;
+      }).catch(error => {
+        alert("Ошибка добавления вопроса: " + error.message);
+      }).finally(() => {
+        addBtn.innerHTML = originalText;
+        addBtn.disabled = false;
+      });
+    }
+
+    function deleteQuestion(questionId) {
+      if (confirm("Вы уверены, что хотите удалить этот вопрос?")) {
+        questionsRef.doc(questionId).delete().catch(error => {
+          alert("Ошибка удаления вопроса: " + error.message);
+        });
+      }
+    }
+  </script>
+
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+</body>
+</html>

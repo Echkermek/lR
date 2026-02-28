@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learn Remote - Детали курса</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <style>
+    body { padding-top: 80px; background-color: #f8f9fa; }
+    .btn-primary { background-color: #17a2b8; border-color: #17a2b8; }
+    .section-title { 
+      font-size: 1.4rem; 
+      font-weight: bold; 
+      margin: 25px 0 15px; 
+      border-bottom: 1px solid #dee2e6; 
+      padding-bottom: 8px; 
+    }
+    .lecture-item, .test-item, .part-item { 
+      margin-bottom: 10px;
+    }
+    .lecture-item { 
+      padding: 12px; 
+      background: #f0f8ff; 
+      border-left: 3px solid #17a2b8;
+    }
+    .test-item { 
+      padding: 15px; 
+      background: #f0f8ff; 
+      border: 1px solid #b0d4f1;
+      border-left: 3px solid #17a2b8;
+    }
+    .part-item { 
+      padding: 10px; 
+      background: white; 
+      border-left: 3px solid #17a2b8; 
+      margin: 8px 0; 
+    }
+    .course-info-card {
+      border-left: 3px solid #17a2b8;
+    }
+    .assigned-group {
+      background: #e8f5e8;
+      border-radius: 15px;
+      padding: 5px 12px;
+      display: inline-block;
+      margin: 3px;
+    }
+    .add-item-card {
+      background: #efeeee;
+      border: 1px dashed #ffffff;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-md navbar-light bg-light fixed-top">
+    <a class="navbar-brand font-weight-bold" href="./courses.html">Learn Remote</a>
+    <div class="navbar-nav mr-auto">
+      <a class="nav-link" href="./courses.html">Курсы</a>
+      <a class="nav-link" href="./groups.html">Группы</a>
+      <a class="nav-link" href="./notifications.html">Уведомления</a>
+      <a class="nav-link" href="./material.html">Материалы</a>
+      <a class="nav-link active" href="./admin.html">Админ</a>
+    </div>
+    <div class="navbar-text mr-3">
+      <strong id="teacherName"></strong>
+    </div>
+    <a class="nav-link text-danger font-weight-bold" href="#" onclick="logout()">Exit</a>
+  </nav>
+
+  <div class="container">
+    <button class="btn btn-secondary mb-3" onclick="history.back()">Назад к курсам</button>
+    <h3 class="mb-4" id="courseName">Курс: Загрузка...</h3>
+
+    <!-- Информация о курсе и назначение группы -->
+    <div class="card mb-4 course-info-card">
+      <div class="card-header bg-info text-white">
+        <h5 class="mb-0">Информация о курсе</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <h6>Назначенные группы:</h6>
+            <div id="assignedGroups">
+              <div class="text-center">
+                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                  <span class="sr-only">Загрузка...</span>
+                </div>
+                <span class="ml-2">Загрузка групп...</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <h6>Добавить группу к курсу:</h6>
+            <div class="form-row">
+              <div class="form-group col-md-6">
+                <label for="groupSelect">Выберите группу:</label>
+                <select id="groupSelect" class="form-control">
+                  <option value="">Загрузка групп...</option>
+                </select>
+              </div>
+              <div class="form-group col-md-4">
+                <label for="semesterInput">Семестр:</label>
+                <input type="number" id="semesterInput" class="form-control" placeholder="Семестр" min="1" max="12">
+              </div>
+              <div class="form-group col-md-2 d-flex align-items-end">
+                <button class="btn btn-primary w-100" onclick="assignGroupToCourse()">Добавить</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Лекции -->
+    <div class="section-title">Лекции</div>
+    
+    <!-- Добавление лекции к курсу -->
+    <div class="card mb-3 add-item-card">
+      <div class="card-body">
+        <h6>Добавить лекцию к курсу:</h6>
+        <div class="form-row">
+          <div class="form-group col-md-8">
+            <select id="lectureSelect" class="form-control">
+              <option value="">Выберите лекцию...</option>
+            </select>
+          </div>
+          <div class="form-group col-md-4">
+            <button class="btn btn-success w-100" onclick="addLectureToCourse()">Добавить лекцию</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div id="lecturesContainer" class="mb-5">
+      <div class="text-center">
+        <div class="spinner-border text-primary" role="status">
+          <span class="sr-only">Загрузка...</span>
+        </div>
+        <p class="mt-2">Лекции загружаются...</p>
+      </div>
+    </div>
+
+    <!-- Тесты и части -->
+    <div class="section-title">Тесты и разделы</div>
+    
+    <!-- Добавление теста к курсу -->
+    <div class="card mb-3 add-item-card">
+      <div class="card-body">
+        <h6>Добавить тест к курсу:</h6>
+        <div class="form-row">
+          <div class="form-group col-md-8">
+            <select id="testSelect" class="form-control">
+              <option value="">Выберите тест...</option>
+            </select>
+          </div>
+          <div class="form-group col-md-4">
+            <button class="btn btn-success w-100" onclick="addTestToCourse()">Добавить тест</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div id="testsContainer">
+      <div class="text-center">
+        <div class="spinner-border text-primary" role="status">
+          <span class="sr-only">Загрузка...</span>
+        </div>
+        <p class="mt-2">Тесты загружаются...</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD2QJQcuUI9lCJP_kqp5tW24J8TN6phPWw",
+      authDomain: "prob1-5c047.firebaseapp.com",
+      projectId: "prob1-5c047",
+      storageBucket: "prob1-5c047.appspot.com",
+      messagingSenderId: "1083579621866",
+      appId: "1:1083579621866:web:73f214d8fd992f0d52d293"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    if (!localStorage.getItem('teacherId')) {
+      window.location.href = './login.html';
+    }
+
+    function logout() {
+      localStorage.removeItem('teacherId');
+      window.location.href = './login.html';
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const courseId = urlParams.get('id');
+    
+    if (!courseId) {
+      alert("Нет ID курса");
+      history.back();
+    }
+
+    // Название курса
+    db.collection("courses").doc(courseId).onSnapshot(doc => {
+      if (doc.exists) {
+        const courseData = doc.data();
+        document.getElementById("courseName").textContent = "Курс: " + (courseData.name || "Без названия");
+      } else {
+        document.getElementById("courseName").textContent = "Курс не найден";
+      }
+    });
+
+    // Загрузка всех групп для выпадающего списка
+    db.collection("groups").orderBy("name").onSnapshot(snap => {
+      const groupSelect = document.getElementById("groupSelect");
+      groupSelect.innerHTML = '<option value="">Выберите группу</option>';
+      
+      if (snap.empty) {
+        groupSelect.innerHTML = '<option value="">Нет доступных групп</option>';
+        return;
+      }
+      
+      snap.forEach(doc => {
+        const group = doc.data();
+        groupSelect.innerHTML += `<option value="${doc.id}">${group.name}</option>`;
+      });
+    });
+
+    // Загрузка всех тестов для выпадающего списка
+    db.collection("tests").orderBy("num").onSnapshot(snap => {
+      const testSelect = document.getElementById("testSelect");
+      testSelect.innerHTML = '<option value="">Выберите тест...</option>';
+      
+      if (snap.empty) {
+        testSelect.innerHTML = '<option value="">Нет доступных тестов</option>';
+        return;
+      }
+      
+      snap.forEach(doc => {
+        const test = doc.data();
+        testSelect.innerHTML += `<option value="${doc.id}">Тест ${test.num}: ${test.title}</option>`;
+      });
+    });
+
+    // Загрузка всех лекций для выпадающего списка
+    db.collection("lections").orderBy("num").onSnapshot(snap => {
+      const lectureSelect = document.getElementById("lectureSelect");
+      lectureSelect.innerHTML = '<option value="">Выберите лекцию...</option>';
+      
+      if (snap.empty) {
+        lectureSelect.innerHTML = '<option value="">Нет доступных лекций</option>';
+        return;
+      }
+      
+      snap.forEach(doc => {
+        const lecture = doc.data();
+        lectureSelect.innerHTML += `<option value="${doc.id}">Лекция ${lecture.num}: ${lecture.name}</option>`;
+      });
+    });
+
+    // Загрузка назначенных групп для курса
+    function loadAssignedGroups() {
+      db.collection("course_groups")
+        .where("courseId", "==", courseId)
+        .onSnapshot(snap => {
+          const assignedGroupsContainer = document.getElementById("assignedGroups");
+          assignedGroupsContainer.innerHTML = "";
+          
+          if (snap.empty) {
+            assignedGroupsContainer.innerHTML = '<p class="text-muted">Группы не назначены</p>';
+            return;
+          }
+
+          const groupPromises = [];
+          const courseGroups = [];
+          
+          snap.forEach(doc => {
+            const courseGroup = doc.data();
+            courseGroup.id = doc.id;
+            courseGroups.push(courseGroup);
+            
+            const groupPromise = db.collection("groups").doc(courseGroup.groupId).get();
+            groupPromises.push(groupPromise);
+          });
+
+          Promise.all(groupPromises).then(groupSnaps => {
+            assignedGroupsContainer.innerHTML = "";
+            
+            groupSnaps.forEach((groupSnap, index) => {
+              if (groupSnap.exists) {
+                const groupData = groupSnap.data();
+                const courseGroup = courseGroups[index];
+                
+                const groupBadge = document.createElement("div");
+                groupBadge.className = "assigned-group";
+                groupBadge.innerHTML = `
+                  <strong>${groupData.name}</strong>
+                  <small class="text-muted ml-2">Семестр: ${courseGroup.semester}</small>
+                  <button class="btn btn-sm btn-outline-danger ml-2" onclick="removeGroupFromCourse('${courseGroup.id}')">×</button>
+                `;
+                assignedGroupsContainer.appendChild(groupBadge);
+              }
+            });
+          });
+        });
+    }
+    function loadCourseTests() {
+      db.collection("test_course")
+        .where("courseId", "==", courseId)
+        .onSnapshot(async (snap) => {
+          const container = document.getElementById("testsContainer");
+          container.innerHTML = "";
+
+          if (snap.empty) {
+            container.innerHTML = "<p class='text-muted text-center'>К курсу не привязано тестов</p>";
+            return;
+          }
+
+          const testPromises = [];
+          const testCourseData = [];
+          
+          snap.forEach(doc => {
+            const testCourse = doc.data();
+            testCourse.id = doc.id;
+            testCourseData.push(testCourse);
+            
+            const testPromise = db.collection("tests").doc(testCourse.testId).get();
+            testPromises.push(testPromise);
+          });
+
+          try {
+            const testSnaps = await Promise.all(testPromises);
+            container.innerHTML = "";
+            
+            testSnaps.forEach((testSnap, index) => {
+              if (testSnap.exists) {
+                const testData = testSnap.data();
+                const testCourse = testCourseData[index];
+                
+                const testDiv = document.createElement("div");
+                testDiv.className = "test-item";
+                testDiv.innerHTML = `
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                      <h5 class="text-primary mb-3">${testData.title || "Без названия теста"}</h5>
+                      <div id="parts-${testSnap.id}">
+                        <div class="text-muted">Загрузка разделов...</div>
+                      </div>
+                    </div>
+                    <div>
+                      <button class="btn btn-outline-danger btn-sm" onclick="removeTestFromCourse('${testCourse.id}')">
+                        Удалить
+                      </button>
+                    </div>
+                  </div>
+                `;
+                container.appendChild(testDiv);
+                
+                loadTestParts(testSnap.id, testData);
+              }
+            });
+          } catch (error) {
+            console.error("Ошибка загрузки тестов:", error);
+            container.innerHTML = `<p class="text-danger text-center">Ошибка загрузки тестов: ${error.message}</p>`;
+          }
+        });
+    }
+    async function loadTestParts(testId, testData) {
+      const partsContainer = document.getElementById(`parts-${testId}`);
+      
+      try {
+        const partsSnap = await db.collection("tests").doc(testId).collection("parts").orderBy("num").get();
+        
+        if (partsSnap.empty) {
+          partsContainer.innerHTML = `<p class="ml-3 text-muted">Нет разделов</p>`;
+        } else {
+          partsContainer.innerHTML = "";
+          partsSnap.forEach(partDoc => {
+            const part = partDoc.data();
+            const partDiv = document.createElement("div");
+            partDiv.className = "part-item";
+            partDiv.innerHTML = `
+              <strong>Часть ${part.num}: ${part.title}</strong>
+            `;
+            partsContainer.appendChild(partDiv);
+          });
+        }
+      } catch (error) {
+        partsContainer.innerHTML = `<p class="text-danger">Ошибка загрузки разделов</p>`;
+      }
+    }
+    function loadCourseLectures() {
+      db.collection("lecture_course")
+        .where("courseId", "==", courseId)
+        .onSnapshot(async (snap) => {
+          const container = document.getElementById("lecturesContainer");
+          container.innerHTML = "";
+          
+          if (snap.empty) {
+            container.innerHTML = "<p class='text-muted text-center'>К курсу не привязано лекций</p>";
+            return;
+          }
+
+          const lecturePromises = [];
+          const lectureCourseData = [];
+          
+          snap.forEach(doc => {
+            const lectureCourse = doc.data();
+            lectureCourse.id = doc.id;
+            lectureCourseData.push(lectureCourse);
+            
+            const lecturePromise = db.collection("lections").doc(lectureCourse.lectureId).get();
+            lecturePromises.push(lecturePromise);
+          });
+
+          try {
+            const lectureSnaps = await Promise.all(lecturePromises);
+            container.innerHTML = "";
+            
+            lectureSnaps.forEach((lectureSnap, index) => {
+              if (lectureSnap.exists) {
+                const lectureData = lectureSnap.data();
+                const lectureCourse = lectureCourseData[index];
+                
+                const div = document.createElement("div");
+                div.className = "lecture-item";
+                div.innerHTML = `
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <strong>${lectureData.name || "Без названия"}</strong>
+                      ${lectureData.num ? `<small class="text-muted"> — №${lectureData.num}</small>` : ""}
+                      ${lectureData.url ? `<br><a href="${lectureData.url}" target="_blank" class="text-success">Открыть материал</a>` : ""}
+                    </div>
+                    <button class="btn btn-outline-danger btn-sm" onclick="removeLectureFromCourse('${lectureCourse.id}')">
+                      Удалить
+                    </button>
+                  </div>
+                `;
+                container.appendChild(div);
+              }
+            });
+          } catch (error) {
+            console.error("Ошибка загрузки лекций:", error);
+            container.innerHTML = `<p class="text-danger text-center">Ошибка загрузки лекций: ${error.message}</p>`;
+          }
+        });
+    }
+
+    // Назначение группы курсу
+    function assignGroupToCourse() {
+      const groupId = document.getElementById("groupSelect").value;
+      const semester = document.getElementById("semesterInput").value;
+      
+      if (!groupId) {
+        alert("Выберите группу");
+        return;
+      }
+      
+      if (!semester) {
+        alert("Введите номер семестра");
+        return;
+      }
+
+      db.collection("course_groups")
+        .where("courseId", "==", courseId)
+        .where("groupId", "==", groupId)
+        .get()
+        .then(snap => {
+          if (!snap.empty) {
+            alert("Эта группа уже назначена данному курсу");
+            return;
+          }
+
+          db.collection("course_groups").add({
+            courseId: courseId,
+            groupId: groupId,
+            semester: parseInt(semester),
+            assignedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }).then(() => {
+            document.getElementById("semesterInput").value = "";
+          }).catch(error => {
+            alert("Ошибка назначения группы: " + error.message);
+          });
+        });
+    }
+
+    // Добавление теста к курсу
+    function addTestToCourse() {
+      const testId = document.getElementById("testSelect").value;
+      
+      if (!testId) {
+        alert("Выберите тест");
+        return;
+      }
+
+      db.collection("test_course")
+        .where("courseId", "==", courseId)
+        .where("testId", "==", testId)
+        .get()
+        .then(snap => {
+          if (!snap.empty) {
+            alert("Этот тест уже привязан к данному курсу");
+            return;
+          }
+
+          db.collection("test_course").add({
+            courseId: courseId,
+            testId: testId,
+            assignedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }).then(() => {
+            document.getElementById("testSelect").value = "";
+          }).catch(error => {
+            alert("Ошибка привязки теста: " + error.message);
+          });
+        });
+    }
+
+    // Добавление лекции к курсу
+    function addLectureToCourse() {
+      const lectureId = document.getElementById("lectureSelect").value;
+      
+      if (!lectureId) {
+        alert("Выберите лекцию");
+        return;
+      }
+
+      db.collection("lecture_course")
+        .where("courseId", "==", courseId)
+        .where("lectureId", "==", lectureId)
+        .get()
+        .then(snap => {
+          if (!snap.empty) {
+            alert("Эта лекция уже привязана к данному курсу");
+            return;
+          }
+
+          db.collection("lecture_course").add({
+            courseId: courseId,
+            lectureId: lectureId,
+            assignedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }).then(() => {
+            document.getElementById("lectureSelect").value = "";
+          }).catch(error => {
+            alert("Ошибка привязки лекции: " + error.message);
+          });
+        });
+    }
+
+    // Удаление группы из курса
+    function removeGroupFromCourse(courseGroupId) {
+      if (confirm("Вы уверены, что хотите удалить группу из этого курса?")) {
+        db.collection("course_groups").doc(courseGroupId).delete()
+          .catch(error => {
+            alert("Ошибка удаления группы: " + error.message);
+          });
+      }
+    }
+
+    // Удаление теста из курса
+    function removeTestFromCourse(testCourseId) {
+      if (confirm("Вы уверены, что хотите удалить тест из этого курса?")) {
+        db.collection("test_course").doc(testCourseId).delete()
+          .catch(error => {
+            alert("Ошибка удаления теста: " + error.message);
+          });
+      }
+    }
+
+    // Удаление лекции из курса
+    function removeLectureFromCourse(lectureCourseId) {
+      if (confirm("Вы уверены, что хотите удалить лекцию из этого курса?")) {
+        db.collection("lecture_course").doc(lectureCourseId).delete()
+          .catch(error => {
+            alert("Ошибка удаления лекции: " + error.message);
+          });
+      }
+    }
+
+    // Инициализация загрузки данных
+    loadAssignedGroups();
+    loadCourseTests();
+    loadCourseLectures();
+  </script>
+
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+</body>
+</html>

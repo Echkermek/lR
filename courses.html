@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learn Remote - Курсы</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <style>
+    body { padding-top: 80px; background-color: #f8f9fa; }
+    .btn-primary { background-color: #17a2b8; border-color: #17a2b8; }
+    .btn-primary:hover { background-color: #138496; border-color: #117a8b; }
+    .course-card { 
+      border: 1px solid #dee2e6; 
+      margin-bottom: 20px;
+    }
+    .group-badge {
+      background: #e8f5e8;
+      border-radius: 12px;
+      padding: 3px 8px;
+      font-size: 0.8rem;
+      margin: 2px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-md navbar-light bg-light fixed-top">
+    <a class="navbar-brand font-weight-bold" href="./courses.html">Learn Remote</a>
+    <div class="navbar-nav mr-auto">
+      <a class="nav-link" href="./courses.html">Курсы</a>
+      <a class="nav-link" href="./groups.html">Группы</a>
+      <a class="nav-link" href="./notifications.html">Уведомления</a>
+      <a class="nav-link" href="./material.html">Материалы</a>
+      <a class="nav-link active" href="./admin.html">Админ</a>
+    </div>
+    <div class="navbar-text mr-3">
+      <strong id="teacherName"></strong>
+    </div>
+    <a class="nav-link text-danger font-weight-bold" href="#" onclick="logout()">Exit</a>
+  </nav>
+
+  <div class="container">
+    <h2 class="mb-4">Мои курсы</h2>
+    <div id="coursesList" class="row"></div>
+
+    <div class="card mt-4">
+      <div class="card-header bg-info text-white">
+        <h5 class="mb-0">Добавить новый курс</h5>
+      </div>
+      <div class="card-body">
+        <div class="input-group">
+          <input type="text" id="newCourse" class="form-control" placeholder="Название нового курса">
+          <div class="input-group-append">
+            <button class="btn btn-primary" onclick="addCourse()">Добавить курс</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD2QJQcuUI9lCJP_kqp5tW24J8TN6phPWw",
+      authDomain: "prob1-5c047.firebaseapp.com",
+      projectId: "prob1-5c047",
+      storageBucket: "prob1-5c047.appspot.com",
+      messagingSenderId: "1083579621866",
+      appId: "1:1083579621866:web:73f214d8fd992f0d52d293"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    if (!localStorage.getItem('teacherId')) {
+      window.location.href = './login.html';
+    }
+
+    function logout() {
+      localStorage.removeItem('teacherId');
+      window.location.href = './login.html';
+    }
+
+    function loadCourses() {
+      db.collection('courses').orderBy('name').onSnapshot(snap => {
+        const list = document.getElementById('coursesList');
+        list.innerHTML = '';
+        
+        if (snap.empty) {
+          list.innerHTML = '<div class="col-12"><div class="alert alert-info text-center">Курсов пока нет</div></div>';
+          return;
+        }
+        
+        snap.forEach(doc => {
+          const courseId = doc.id;
+          const c = doc.data();
+          
+          db.collection("course_groups")
+            .where("courseId", "==", courseId)
+            .get()
+            .then(courseGroupsSnap => {
+              const groupPromises = [];
+              const groupsInfo = [];
+              
+              courseGroupsSnap.forEach(courseGroupDoc => {
+                const courseGroupData = courseGroupDoc.data();
+                const groupPromise = db.collection("groups").doc(courseGroupData.groupId).get();
+                groupPromises.push(groupPromise);
+                groupsInfo.push({groupId: courseGroupData.groupId, semester: courseGroupData.semester});
+              });
+              
+              return Promise.all(groupPromises).then(groupSnaps => {
+                const assignedGroups = [];
+                groupSnaps.forEach((groupSnap, index) => {
+                  if (groupSnap.exists) {
+                    const groupData = groupSnap.data();
+                    assignedGroups.push({
+                      name: groupData.name,
+                      semester: groupsInfo[index].semester
+                    });
+                  }
+                });
+                return assignedGroups;
+              });
+            })
+            .then(assignedGroups => {
+              const col = document.createElement('div');
+              col.className = 'col-md-6 col-lg-4';
+              
+              let groupsHTML = '';
+              if (assignedGroups.length > 0) {
+                assignedGroups.forEach(group => {
+                  groupsHTML += `<span class="group-badge">${group.name} (сем. ${group.semester})</span>`;
+                });
+              } else {
+                groupsHTML = '<small class="text-muted">Группы не назначены</small>';
+              }
+              
+              col.innerHTML = `
+                <div class="card course-card">
+                  <div class="card-body">
+                    <h5 class="card-title">${c.name}</h5>
+                    <div class="mb-2">
+                      ${groupsHTML}
+                    </div>
+                    <a href="course_details.html?id=${courseId}" class="btn btn-primary btn-block">Открыть курс</a>
+                  </div>
+                </div>
+              `;
+              list.appendChild(col);
+            })
+            .catch(error => {
+              console.error("Ошибка загрузки групп:", error);
+            });
+        });
+      });
+    }
+
+    function addCourse() {
+      const name = document.getElementById('newCourse').value.trim();
+      if (!name) {
+        alert('Введите название курса');
+        return;
+      }
+      
+      db.collection('courses').add({ 
+        name, 
+        createdAt: firebase.firestore.FieldValue.serverTimestamp() 
+      }).then(() => {
+        document.getElementById('newCourse').value = '';
+      }).catch(error => {
+        alert('Ошибка создания курса: ' + error.message);
+      });
+    }
+
+    loadCourses();
+  </script>
+  
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+</body>
+</html>
