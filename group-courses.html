@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learn Remote - Курсы группы</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <style>
+    body { padding-top: 80px; background-color: #f8f9fa; }
+    .course-item { 
+      cursor: pointer; 
+      transition: all 0.2s ease; 
+      margin-bottom: 10px;
+    }
+    .course-item:hover { 
+      background-color: #f0f8ff; 
+      transform: translateX(5px);
+    }
+    .back-btn { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-md navbar-light bg-light fixed-top">
+    <a class="navbar-brand font-weight-bold" href="./courses.html">Learn Remote</a>
+    <div class="navbar-nav mr-auto">
+      <a class="nav-link" href="./courses.html">Курсы</a>
+      <a class="nav-link" href="./groups.html">Группы</a>
+      <a class="nav-link" href="./notifications.html">Уведомления</a>
+      <a class="nav-link" href="./material.html">Материалы</a>
+      <a class="nav-link active" href="./admin.html">Админ</a>
+    </div>
+    <div class="navbar-text mr-3">
+      <strong id="teacherName"></strong>
+    </div>
+    <a class="nav-link text-danger font-weight-bold" href="#" onclick="logout()">Exit</a>
+  </nav>
+
+  <div class="container">
+    <div class="back-btn">
+      <button class="btn btn-secondary" onclick="goBack()">← Назад к группам</button>
+    </div>
+    
+    <div class="text-center mb-4">
+      <h1 id="groupNameTitle"></h1>
+    </div>
+    
+    <div class="card">
+      <div class="card-header bg-info text-white">
+        <h5 class="mb-0">Список курсов</h5>
+      </div>
+      <div class="card-body">
+        <div id="coursesList"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD2QJQcuUI9lCJP_kqp5tW24J8TN6phPWw",
+      authDomain: "prob1-5c047.firebaseapp.com",
+      projectId: "prob1-5c047",
+      storageBucket: "prob1-5c047.appspot.com",
+      messagingSenderId: "1083579621866",
+      appId: "1:1083579621866:web:73f214d8fd992f0d52d293"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    if (!localStorage.getItem('teacherId')) {
+      window.location.href = './login.html';
+    }
+
+    function logout() {
+      localStorage.removeItem('teacherId');
+      window.location.href = './login.html';
+    }
+
+    function goBack() {
+      window.location.href = './groups.html';
+    }
+
+    // Загрузка при старте
+    document.addEventListener('DOMContentLoaded', function() {
+      const groupId = localStorage.getItem('currentGroupId');
+      const groupName = localStorage.getItem('currentGroupName');
+      
+      if (!groupId || !groupName) {
+        window.location.href = './groups.html';
+        return;
+      }
+      
+      document.getElementById('groupNameTitle').textContent = groupName;
+      loadGroupCourses(groupId);
+    });
+
+    // Загрузка курсов группы
+    function loadGroupCourses(groupId) {
+      const coursesList = document.getElementById('coursesList');
+      coursesList.innerHTML = '<p class="text-center">Загрузка...</p>';
+      
+      // Получаем курсы группы из коллекции course_groups
+      db.collection("course_groups")
+        .where("groupId", "==", groupId)
+        .get()
+        .then(snapshot => {
+          if (snapshot.empty) {
+            coursesList.innerHTML = '<p class="text-center text-muted">Нет курсов для этой группы</p>';
+            return;
+          }
+          
+          coursesList.innerHTML = '';
+          const coursePromises = [];
+          
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            const courseId = data.courseId;
+            
+            // Получаем информацию о курсе
+            coursePromises.push(
+              db.collection("courses").doc(courseId).get().then(courseDoc => {
+                if (courseDoc.exists) {
+                  const courseData = courseDoc.data();
+                  return {
+                    courseId: courseId,
+                    courseName: courseData.name || courseData.title || 'Без названия',
+                    assignedAt: data.assignedAt || 'Не указано',
+                    semester: data.semester || 'Не указан'
+                  };
+                }
+                return null;
+              })
+            );
+          });
+          
+          Promise.all(coursePromises).then(courses => {
+            courses.filter(course => course !== null).forEach(course => {
+              const courseItem = document.createElement('div');
+              courseItem.className = 'card course-item';
+              courseItem.onclick = () => showCoursePerformance(course.courseId, course.courseName);
+              courseItem.innerHTML = `
+                <div class="card-body">
+                  <h5 class="card-title">${course.courseName}</h5>
+                  <p class="card-text text-muted">
+                    <small>Назначен: ${course.assignedAt}</small><br>
+                    <small>Семестр: ${course.semester}</small>
+                  </p>
+                </div>
+              `;
+              coursesList.appendChild(courseItem);
+            });
+          });
+        })
+        .catch(error => {
+          console.error("Ошибка загрузки курсов:", error);
+          coursesList.innerHTML = '<p class="text-center text-danger">Ошибка загрузки данных</p>';
+        });
+    }
+
+    // Показать успеваемость по курсу
+    function showCoursePerformance(courseId, courseName) {
+      localStorage.setItem('currentCourseId', courseId);
+      localStorage.setItem('currentCourseName', courseName);
+      window.location.href = './course-performance.html';
+    }
+  </script>
+</body>
+</html>
