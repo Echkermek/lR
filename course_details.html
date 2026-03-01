@@ -22,12 +22,22 @@
       padding: 12px; 
       background: #f0f8ff; 
       border-left: 3px solid #17a2b8;
+      transition: all 0.2s ease;
+    }
+    .lecture-item.selected { 
+      background: #d4edda; 
+      border-left: 3px solid #28a745;
     }
     .test-item { 
       padding: 15px; 
       background: #f0f8ff; 
       border: 1px solid #b0d4f1;
       border-left: 3px solid #17a2b8;
+      transition: all 0.2s ease;
+    }
+    .test-item.selected { 
+      background: #d4edda; 
+      border-left: 3px solid #28a745;
     }
     .part-item { 
       padding: 10px; 
@@ -48,6 +58,29 @@
     .add-item-card {
       background: #efeeee;
       border: 1px dashed #ffffff;
+    }
+    .selection-controls {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .item-checkbox {
+      margin-right: 10px;
+      transform: scale(1.2);
+    }
+    .item-content {
+      flex-grow: 1;
+      cursor: pointer;
+    }
+    .lecture-item:hover, .test-item:hover {
+      background: #e3f2fd;
+    }
+    .lecture-item.selected:hover, .test-item.selected:hover {
+      background: #c3e6cb;
     }
   </style>
 </head>
@@ -114,64 +147,106 @@
     <!-- Лекции -->
     <div class="section-title">Лекции</div>
     
-    <!-- Добавление лекции к курсу -->
-    <div class="card mb-3 add-item-card">
-      <div class="card-body">
-        <h6>Добавить лекцию к курсу:</h6>
-        <div class="form-row">
-          <div class="form-group col-md-8">
-            <select id="lectureSelect" class="form-control">
-              <option value="">Выберите лекцию...</option>
-            </select>
-          </div>
-          <div class="form-group col-md-4">
-            <button class="btn btn-success w-100" onclick="addLectureToCourse()">Добавить лекцию</button>
-          </div>
-        </div>
-      </div>
+    <!-- Множественный выбор лекций -->
+    <div class="selection-controls" id="lectureSelectionControls" style="display: none;">
+      <button class="btn btn-outline-primary" onclick="selectAllLectures()">Выбрать все</button>
+      <button class="btn btn-outline-secondary" onclick="deselectAllLectures()">Снять все</button>
+      <button class="btn btn-success" onclick="addSelectedLectures()">
+        <span id="addLecturesBtnText">Добавить выбранные лекции</span>
+        <span id="selectedLecturesCount" class="badge badge-light ml-2">0</span>
+      </button>
     </div>
     
-    <div id="lecturesContainer" class="mb-5">
-      <div class="text-center">
-        <div class="spinner-border text-primary" role="status">
-          <span class="sr-only">Загрузка...</span>
+    <!-- Список доступных лекций с чекбоксами -->
+    <div class="card mb-3">
+      <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">Доступные лекции</h6>
+        <span class="badge badge-light" id="availableLecturesCount">0</span>
+      </div>
+      <div class="card-body p-0">
+        <div id="availableLecturesList" class="p-3">
+          <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+              <span class="sr-only">Загрузка...</span>
+            </div>
+            <p class="mt-2">Лекции загружаются...</p>
+          </div>
         </div>
-        <p class="mt-2">Лекции загружаются...</p>
       </div>
     </div>
 
-    <!-- Тесты и части -->
-    <div class="section-title">Тесты и разделы</div>
-    
-    <!-- Добавление теста к курсу -->
-    <div class="card mb-3 add-item-card">
-      <div class="card-body">
-        <h6>Добавить тест к курсу:</h6>
-        <div class="form-row">
-          <div class="form-group col-md-8">
-            <select id="testSelect" class="form-control">
-              <option value="">Выберите тест...</option>
-            </select>
-          </div>
-          <div class="form-group col-md-4">
-            <button class="btn btn-success w-100" onclick="addTestToCourse()">Добавить тест</button>
+    <!-- Привязанные лекции -->
+    <div class="card mb-3">
+      <div class="card-header bg-info text-white">
+        <h6 class="mb-0">Привязанные лекции</h6>
+      </div>
+      <div class="card-body p-0">
+        <div id="assignedLecturesList" class="p-3">
+          <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+              <span class="sr-only">Загрузка...</span>
+            </div>
+            <p class="mt-2">Лекции загружаются...</p>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Тесты -->
+    <div class="section-title">Тесты и разделы</div>
     
-    <div id="testsContainer">
-      <div class="text-center">
-        <div class="spinner-border text-primary" role="status">
-          <span class="sr-only">Загрузка...</span>
+    <!-- Множественный выбор тестов -->
+    <div class="selection-controls" id="testSelectionControls" style="display: none;">
+      <button class="btn btn-outline-primary" onclick="selectAllTests()">Выбрать все</button>
+      <button class="btn btn-outline-secondary" onclick="deselectAllTests()">Снять все</button>
+      <button class="btn btn-success" onclick="addSelectedTests()">
+        <span id="addTestsBtnText">Добавить выбранные тесты</span>
+        <span id="selectedTestsCount" class="badge badge-light ml-2">0</span>
+      </button>
+    </div>
+    
+    <!-- Список доступных тестов с чекбоксами -->
+    <div class="card mb-3">
+      <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">Доступные тесты</h6>
+        <span class="badge badge-light" id="availableTestsCount">0</span>
+      </div>
+      <div class="card-body p-0">
+        <div id="availableTestsList" class="p-3">
+          <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+              <span class="sr-only">Загрузка...</span>
+            </div>
+            <p class="mt-2">Тесты загружаются...</p>
+          </div>
         </div>
-        <p class="mt-2">Тесты загружаются...</p>
+      </div>
+    </div>
+
+    <!-- Привязанные тесты -->
+    <div class="card mb-3">
+      <div class="card-header bg-info text-white">
+        <h6 class="mb-0">Привязанные тесты</h6>
+      </div>
+      <div class="card-body p-0">
+        <div id="assignedTestsList" class="p-3">
+          <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+              <span class="sr-only">Загрузка...</span>
+            </div>
+            <p class="mt-2">Тесты загружаются...</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyD2QJQcuUI9lCJP_kqp5tW24J8TN6phPWw",
@@ -201,6 +276,14 @@
       history.back();
     }
 
+    // Состояние выбранных элементов
+    let selectedLectures = new Set();
+    let selectedTests = new Set();
+    
+    // Карта уже привязанных элементов
+    let assignedLecturesMap = new Map();
+    let assignedTestsMap = new Map();
+
     // Название курса
     db.collection("courses").doc(courseId).onSnapshot(doc => {
       if (doc.exists) {
@@ -227,36 +310,90 @@
       });
     });
 
-    // Загрузка всех тестов для выпадающего списка
+    // Загрузка всех тестов для множественного выбора
     db.collection("tests").orderBy("num").onSnapshot(snap => {
-      const testSelect = document.getElementById("testSelect");
-      testSelect.innerHTML = '<option value="">Выберите тест...</option>';
+      const container = document.getElementById("availableTestsList");
+      const countSpan = document.getElementById("availableTestsCount");
       
       if (snap.empty) {
-        testSelect.innerHTML = '<option value="">Нет доступных тестов</option>';
+        container.innerHTML = '<p class="text-muted text-center">Нет доступных тестов</p>';
+        countSpan.textContent = '0';
         return;
       }
+      
+      let html = '';
+      let index = 0;
       
       snap.forEach(doc => {
         const test = doc.data();
-        testSelect.innerHTML += `<option value="${doc.id}">Тест ${test.num}: ${test.title}</option>`;
+        const testId = doc.id;
+        const isAssigned = assignedTestsMap.has(testId);
+        
+        html += `
+          <div class="test-item d-flex align-items-center ${isAssigned ? 'bg-light text-muted' : ''}" data-test-id="${testId}">
+            <input type="checkbox" class="item-checkbox test-checkbox" 
+                   data-test-id="${testId}" 
+                   ${isAssigned ? 'disabled' : ''}
+                   onchange="updateTestSelection('${testId}', this.checked)">
+            <div class="item-content" onclick="toggleTestCheckbox('${testId}')">
+              <strong>${test.title || "Без названия"}</strong>
+              <small class="text-muted ml-2">(Тест ${test.num || "не указан"})</small>
+              ${isAssigned ? '<span class="badge badge-success ml-2">Уже привязан</span>' : ''}
+            </div>
+          </div>
+        `;
+        index++;
       });
+      
+      container.innerHTML = html;
+      countSpan.textContent = snap.size.toString();
+      
+      // Показываем/скрываем кнопки выбора в зависимости от наличия доступных тестов
+      document.getElementById("testSelectionControls").style.display = 
+        snap.size > 0 ? 'flex' : 'none';
     });
 
-    // Загрузка всех лекций для выпадающего списка
+    // Загрузка всех лекций для множественного выбора
     db.collection("lections").orderBy("num").onSnapshot(snap => {
-      const lectureSelect = document.getElementById("lectureSelect");
-      lectureSelect.innerHTML = '<option value="">Выберите лекцию...</option>';
+      const container = document.getElementById("availableLecturesList");
+      const countSpan = document.getElementById("availableLecturesCount");
       
       if (snap.empty) {
-        lectureSelect.innerHTML = '<option value="">Нет доступных лекций</option>';
+        container.innerHTML = '<p class="text-muted text-center">Нет доступных лекций</p>';
+        countSpan.textContent = '0';
         return;
       }
       
+      let html = '';
+      let index = 0;
+      
       snap.forEach(doc => {
         const lecture = doc.data();
-        lectureSelect.innerHTML += `<option value="${doc.id}">Лекция ${lecture.num}: ${lecture.name}</option>`;
+        const lectureId = doc.id;
+        const isAssigned = assignedLecturesMap.has(lectureId);
+        
+        html += `
+          <div class="lecture-item d-flex align-items-center ${isAssigned ? 'bg-light text-muted' : ''}" data-lecture-id="${lectureId}">
+            <input type="checkbox" class="item-checkbox lecture-checkbox" 
+                   data-lecture-id="${lectureId}" 
+                   ${isAssigned ? 'disabled' : ''}
+                   onchange="updateLectureSelection('${lectureId}', this.checked)">
+            <div class="item-content" onclick="toggleLectureCheckbox('${lectureId}')">
+              <strong>${lecture.name || "Без названия"}</strong>
+              <small class="text-muted ml-2">(Лекция ${lecture.num || "не указана"})</small>
+              ${isAssigned ? '<span class="badge badge-success ml-2">Уже привязана</span>' : ''}
+            </div>
+          </div>
+        `;
+        index++;
       });
+      
+      container.innerHTML = html;
+      countSpan.textContent = snap.size.toString();
+      
+      // Показываем/скрываем кнопки выбора в зависимости от наличия доступных лекций
+      document.getElementById("lectureSelectionControls").style.display = 
+        snap.size > 0 ? 'flex' : 'none';
     });
 
     // Загрузка назначенных групп для курса
@@ -305,13 +442,15 @@
           });
         });
     }
-    function loadCourseTests() {
+
+    // Загрузка привязанных тестов
+    function loadAssignedTests() {
       db.collection("test_course")
         .where("courseId", "==", courseId)
         .onSnapshot(async (snap) => {
-          const container = document.getElementById("testsContainer");
-          container.innerHTML = "";
-
+          const container = document.getElementById("assignedTestsList");
+          assignedTestsMap.clear();
+          
           if (snap.empty) {
             container.innerHTML = "<p class='text-muted text-center'>К курсу не привязано тестов</p>";
             return;
@@ -324,6 +463,7 @@
             const testCourse = doc.data();
             testCourse.id = doc.id;
             testCourseData.push(testCourse);
+            assignedTestsMap.set(testCourse.testId, testCourse.id);
             
             const testPromise = db.collection("tests").doc(testCourse.testId).get();
             testPromises.push(testPromise);
@@ -366,36 +506,14 @@
           }
         });
     }
-    async function loadTestParts(testId, testData) {
-      const partsContainer = document.getElementById(`parts-${testId}`);
-      
-      try {
-        const partsSnap = await db.collection("tests").doc(testId).collection("parts").orderBy("num").get();
-        
-        if (partsSnap.empty) {
-          partsContainer.innerHTML = `<p class="ml-3 text-muted">Нет разделов</p>`;
-        } else {
-          partsContainer.innerHTML = "";
-          partsSnap.forEach(partDoc => {
-            const part = partDoc.data();
-            const partDiv = document.createElement("div");
-            partDiv.className = "part-item";
-            partDiv.innerHTML = `
-              <strong>Часть ${part.num}: ${part.title}</strong>
-            `;
-            partsContainer.appendChild(partDiv);
-          });
-        }
-      } catch (error) {
-        partsContainer.innerHTML = `<p class="text-danger">Ошибка загрузки разделов</p>`;
-      }
-    }
-    function loadCourseLectures() {
+
+    // Загрузка привязанных лекций
+    function loadAssignedLectures() {
       db.collection("lecture_course")
         .where("courseId", "==", courseId)
         .onSnapshot(async (snap) => {
-          const container = document.getElementById("lecturesContainer");
-          container.innerHTML = "";
+          const container = document.getElementById("assignedLecturesList");
+          assignedLecturesMap.clear();
           
           if (snap.empty) {
             container.innerHTML = "<p class='text-muted text-center'>К курсу не привязано лекций</p>";
@@ -409,6 +527,7 @@
             const lectureCourse = doc.data();
             lectureCourse.id = doc.id;
             lectureCourseData.push(lectureCourse);
+            assignedLecturesMap.set(lectureCourse.lectureId, lectureCourse.id);
             
             const lecturePromise = db.collection("lections").doc(lectureCourse.lectureId).get();
             lecturePromises.push(lecturePromise);
@@ -445,6 +564,211 @@
             container.innerHTML = `<p class="text-danger text-center">Ошибка загрузки лекций: ${error.message}</p>`;
           }
         });
+    }
+
+    async function loadTestParts(testId, testData) {
+      const partsContainer = document.getElementById(`parts-${testId}`);
+      
+      try {
+        const partsSnap = await db.collection("tests").doc(testId).collection("parts").orderBy("num").get();
+        
+        if (partsSnap.empty) {
+          partsContainer.innerHTML = `<p class="ml-3 text-muted">Нет разделов</p>`;
+        } else {
+          partsContainer.innerHTML = "";
+          partsSnap.forEach(partDoc => {
+            const part = partDoc.data();
+            const partDiv = document.createElement("div");
+            partDiv.className = "part-item";
+            partDiv.innerHTML = `
+              <strong>Часть ${part.num}: ${part.title}</strong>
+            `;
+            partsContainer.appendChild(partDiv);
+          });
+        }
+      } catch (error) {
+        partsContainer.innerHTML = `<p class="text-danger">Ошибка загрузки разделов</p>`;
+      }
+    }
+
+    // Функции для работы с множественным выбором лекций
+    function updateLectureSelection(lectureId, isSelected) {
+      if (isSelected) {
+        selectedLectures.add(lectureId);
+      } else {
+        selectedLectures.delete(lectureId);
+      }
+      updateSelectedLecturesCount();
+    }
+
+    function toggleLectureCheckbox(lectureId) {
+      const checkbox = document.querySelector(`.lecture-checkbox[data-lecture-id="${lectureId}"]`);
+      if (checkbox && !checkbox.disabled) {
+        checkbox.checked = !checkbox.checked;
+        updateLectureSelection(lectureId, checkbox.checked);
+      }
+    }
+
+    function selectAllLectures() {
+      document.querySelectorAll('.lecture-checkbox:not(:disabled)').forEach(checkbox => {
+        checkbox.checked = true;
+        updateLectureSelection(checkbox.dataset.lectureId, true);
+      });
+    }
+
+    function deselectAllLectures() {
+      document.querySelectorAll('.lecture-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+        if (!checkbox.disabled) {
+          updateLectureSelection(checkbox.dataset.lectureId, false);
+        }
+      });
+    }
+
+    function updateSelectedLecturesCount() {
+      const count = selectedLectures.size;
+      document.getElementById('selectedLecturesCount').textContent = count;
+      const btnText = document.getElementById('addLecturesBtnText');
+      btnText.textContent = count > 0 ? `Добавить выбранные лекции (${count})` : 'Добавить выбранные лекции';
+    }
+
+    // Функции для работы с множественным выбором тестов
+    function updateTestSelection(testId, isSelected) {
+      if (isSelected) {
+        selectedTests.add(testId);
+      } else {
+        selectedTests.delete(testId);
+      }
+      updateSelectedTestsCount();
+    }
+
+    function toggleTestCheckbox(testId) {
+      const checkbox = document.querySelector(`.test-checkbox[data-test-id="${testId}"]`);
+      if (checkbox && !checkbox.disabled) {
+        checkbox.checked = !checkbox.checked;
+        updateTestSelection(testId, checkbox.checked);
+      }
+    }
+
+    function selectAllTests() {
+      document.querySelectorAll('.test-checkbox:not(:disabled)').forEach(checkbox => {
+        checkbox.checked = true;
+        updateTestSelection(checkbox.dataset.testId, true);
+      });
+    }
+
+    function deselectAllTests() {
+      document.querySelectorAll('.test-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+        if (!checkbox.disabled) {
+          updateTestSelection(checkbox.dataset.testId, false);
+        }
+      });
+    }
+
+    function updateSelectedTestsCount() {
+      const count = selectedTests.size;
+      document.getElementById('selectedTestsCount').textContent = count;
+      const btnText = document.getElementById('addTestsBtnText');
+      btnText.textContent = count > 0 ? `Добавить выбранные тесты (${count})` : 'Добавить выбранные тесты';
+    }
+
+    // Добавление выбранных лекций
+    async function addSelectedLectures() {
+      if (selectedLectures.size === 0) {
+        alert('Выберите хотя бы одну лекцию');
+        return;
+      }
+
+      const addBtn = document.getElementById('addLecturesBtnText');
+      const originalText = addBtn.textContent;
+      addBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Добавление...';
+
+      try {
+        const promises = [];
+        
+        for (const lectureId of selectedLectures) {
+          // Проверяем, не привязана ли уже лекция
+          const existing = await db.collection("lecture_course")
+            .where("courseId", "==", courseId)
+            .where("lectureId", "==", lectureId)
+            .get();
+          
+          if (existing.empty) {
+            promises.push(
+              db.collection("lecture_course").add({
+                courseId: courseId,
+                lectureId: lectureId,
+                assignedAt: firebase.firestore.FieldValue.serverTimestamp()
+              })
+            );
+          }
+        }
+
+        await Promise.all(promises);
+        
+        // Очищаем выбор
+        selectedLectures.clear();
+        deselectAllLectures();
+        
+        alert(`Успешно добавлено ${promises.length} лекций`);
+        
+      } catch (error) {
+        console.error("Ошибка добавления лекций:", error);
+        alert("Ошибка добавления лекций: " + error.message);
+      } finally {
+        addBtn.innerHTML = originalText;
+        updateSelectedLecturesCount();
+      }
+    }
+
+    // Добавление выбранных тестов
+    async function addSelectedTests() {
+      if (selectedTests.size === 0) {
+        alert('Выберите хотя бы один тест');
+        return;
+      }
+
+      const addBtn = document.getElementById('addTestsBtnText');
+      const originalText = addBtn.textContent;
+      addBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Добавление...';
+
+      try {
+        const promises = [];
+        
+        for (const testId of selectedTests) {
+          // Проверяем, не привязан ли уже тест
+          const existing = await db.collection("test_course")
+            .where("courseId", "==", courseId)
+            .where("testId", "==", testId)
+            .get();
+          
+          if (existing.empty) {
+            promises.push(
+              db.collection("test_course").add({
+                courseId: courseId,
+                testId: testId,
+                assignedAt: firebase.firestore.FieldValue.serverTimestamp()
+              })
+            );
+          }
+        }
+
+        await Promise.all(promises);
+        
+        // Очищаем выбор
+        selectedTests.clear();
+        deselectAllTests();
+        
+        alert(`Успешно добавлено ${promises.length} тестов`);
+        
+      } catch (error) {
+        console.error("Ошибка добавления тестов:", error);
+        alert("Ошибка добавления тестов: " + error.message);
+      } finally {
+        addBtn.innerHTML = originalText;
+        updateSelectedTestsCount();
+      }
     }
 
     // Назначение группы курсу
@@ -485,68 +809,6 @@
         });
     }
 
-    // Добавление теста к курсу
-    function addTestToCourse() {
-      const testId = document.getElementById("testSelect").value;
-      
-      if (!testId) {
-        alert("Выберите тест");
-        return;
-      }
-
-      db.collection("test_course")
-        .where("courseId", "==", courseId)
-        .where("testId", "==", testId)
-        .get()
-        .then(snap => {
-          if (!snap.empty) {
-            alert("Этот тест уже привязан к данному курсу");
-            return;
-          }
-
-          db.collection("test_course").add({
-            courseId: courseId,
-            testId: testId,
-            assignedAt: firebase.firestore.FieldValue.serverTimestamp()
-          }).then(() => {
-            document.getElementById("testSelect").value = "";
-          }).catch(error => {
-            alert("Ошибка привязки теста: " + error.message);
-          });
-        });
-    }
-
-    // Добавление лекции к курсу
-    function addLectureToCourse() {
-      const lectureId = document.getElementById("lectureSelect").value;
-      
-      if (!lectureId) {
-        alert("Выберите лекцию");
-        return;
-      }
-
-      db.collection("lecture_course")
-        .where("courseId", "==", courseId)
-        .where("lectureId", "==", lectureId)
-        .get()
-        .then(snap => {
-          if (!snap.empty) {
-            alert("Эта лекция уже привязана к данному курсу");
-            return;
-          }
-
-          db.collection("lecture_course").add({
-            courseId: courseId,
-            lectureId: lectureId,
-            assignedAt: firebase.firestore.FieldValue.serverTimestamp()
-          }).then(() => {
-            document.getElementById("lectureSelect").value = "";
-          }).catch(error => {
-            alert("Ошибка привязки лекции: " + error.message);
-          });
-        });
-    }
-
     // Удаление группы из курса
     function removeGroupFromCourse(courseGroupId) {
       if (confirm("Вы уверены, что хотите удалить группу из этого курса?")) {
@@ -579,12 +841,8 @@
 
     // Инициализация загрузки данных
     loadAssignedGroups();
-    loadCourseTests();
-    loadCourseLectures();
+    loadAssignedTests();
+    loadAssignedLectures();
   </script>
-
-  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
 </body>
 </html>
