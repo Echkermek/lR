@@ -1,3 +1,4 @@
+// Firebase конфигурация
 const firebaseConfig = {
   apiKey: "AIzaSyD2QJQcuUI9lCJP_kqp5tW24J8TN6phPWw",
   authDomain: "prob1-5c047.firebaseapp.com",
@@ -7,13 +8,36 @@ const firebaseConfig = {
   appId: "1:1083579621866:web:73f214d8fd992f0d52d293"
 };
 
-firebase.initializeApp(firebaseConfig);
+// Инициализация Firebase
+try {
+  firebase.initializeApp(firebaseConfig);
+  console.log('Firebase инициализирован успешно');
+} catch (error) {
+  console.error('Ошибка инициализации Firebase:', error);
+}
+
 const db = firebase.firestore();
 
-if (!localStorage.getItem('teacherId')) window.location.href = 'login.html';
+// Проверка авторизации
+if (!localStorage.getItem('teacherId')) {
+  window.location.href = 'login.html';
+}
+
+// Отображение имени преподавателя
+document.addEventListener('DOMContentLoaded', function() {
+  const teacherNameEl = document.getElementById('teacherName');
+  if (teacherNameEl) {
+    const name = localStorage.getItem('teacherName') || '';
+    const surname = localStorage.getItem('teacherSurname') || '';
+    teacherNameEl.textContent = `${name} ${surname}`.trim();
+  }
+});
 
 function logout() { 
   localStorage.removeItem('teacherId'); 
+  localStorage.removeItem('teacherName');
+  localStorage.removeItem('teacherSurname');
+  localStorage.removeItem('teacherEmail');
   window.location.href = 'login.html'; 
 }
 
@@ -22,12 +46,16 @@ let currentPartId = null;
 let currentQuestionId = null;
 let lectures = [];
 
-db.collection("lections").onSnapshot(snap => {
+// Загрузка лекций для выпадающего списка
+db.collection("lections").orderBy("num").onSnapshot(snap => {
+  console.log('Загружено лекций:', snap.size);
   lectures = [];
   snap.forEach(doc => {
     lectures.push({ id: doc.id, ...doc.data() });
   });
   updateLectureSelects();
+}, error => {
+  console.error("Ошибка загрузки лекций:", error);
 });
 
 function updateLectureSelects() {
@@ -40,12 +68,16 @@ function updateLectureSelects() {
   }
 }
 
-db.collection("tests").onSnapshot(snap => {
+// Загрузка тестов
+db.collection("tests").orderBy("num").onSnapshot(snap => {
+  console.log('Загружено тестов:', snap.size);
   const container = document.getElementById("testsList");
+  if (!container) return;
+  
   container.innerHTML = "";
   
   if (snap.empty) {
-    container.innerHTML = "<p class='text-muted text-center'>Тестов пока нет</p>";
+    container.innerHTML = "<p class='text-muted text-center py-4'>Тестов пока нет</p>";
     return;
   }
   
@@ -56,8 +88,8 @@ db.collection("tests").onSnapshot(snap => {
     div.innerHTML = `
       <div class="d-flex justify-content-between align-items-center">
         <div>
-          <h5>${test.title || "Без названия"}</h5>
-          <p class="mb-0">Номер: ${test.num || "Не указан"}</p>
+          <h5 class="mb-1">${test.title || "Без названия"}</h5>
+          <p class="mb-0 text-muted">Номер: ${test.num || "Не указан"}</p>
         </div>
         <div>
           <button class="btn btn-primary btn-sm mr-2" onclick="openEditTest('${test.id}')">Редактировать</button>
@@ -67,14 +99,24 @@ db.collection("tests").onSnapshot(snap => {
     `;
     container.appendChild(div);
   });
+}, error => {
+  console.error("Ошибка загрузки тестов:", error);
+  const container = document.getElementById("testsList");
+  if (container) {
+    container.innerHTML = `<p class="text-danger text-center">Ошибка загрузки: ${error.message}</p>`;
+  }
 });
 
-db.collection("lections").onSnapshot(snap => {
+// Загрузка лекций для списка
+db.collection("lections").orderBy("num").onSnapshot(snap => {
+  console.log('Загружено лекций для списка:', snap.size);
   const container = document.getElementById("lecturesList");
+  if (!container) return;
+  
   container.innerHTML = "";
   
   if (snap.empty) {
-    container.innerHTML = "<p class='text-muted text-center'>Лекций пока нет</p>";
+    container.innerHTML = "<p class='text-muted text-center py-4'>Лекций пока нет</p>";
     return;
   }
   
@@ -85,9 +127,9 @@ db.collection("lections").onSnapshot(snap => {
     div.innerHTML = `
       <div class="d-flex justify-content-between align-items-center">
         <div>
-          <h5>${lecture.name || "Без названия"}</h5>
-          <p class="mb-0">Номер: ${lecture.num || "Не указан"}</p>
-          ${lecture.url ? `<a href="${lecture.url}" target="_blank" class="text-success">Открыть лекцию</a>` : ""}
+          <h5 class="mb-1">${lecture.name || "Без названия"}</h5>
+          <p class="mb-0 text-muted">Номер: ${lecture.num || "Не указан"}</p>
+          ${lecture.url ? `<a href="${lecture.url}" target="_blank" class="text-success small">Открыть лекцию →</a>` : ""}
         </div>
         <div>
           <button class="btn btn-primary btn-sm mr-2" onclick="openEditLecture('${lecture.id}')">Редактировать</button>
@@ -97,16 +139,28 @@ db.collection("lections").onSnapshot(snap => {
     `;
     container.appendChild(div);
   });
+}, error => {
+  console.error("Ошибка загрузки лекций:", error);
+  const container = document.getElementById("lecturesList");
+  if (container) {
+    container.innerHTML = `<p class="text-danger text-center">Ошибка загрузки: ${error.message}</p>`;
+  }
 });
 
+// Функции для работы с тестами
 function addTest() {
   const title = document.getElementById("newTestTitle").value.trim();
   const num = document.getElementById("newTestNum").value;
+  const messageDiv = document.getElementById('addTestMessage');
   
   if (!title || !num) {
-    alert("Заполните все поля");
+    if (messageDiv) messageDiv.innerHTML = '<div class="alert alert-warning">Заполните все поля</div>';
     return;
   }
+  
+  const btn = document.getElementById('addTestBtnText');
+  const originalText = btn.textContent;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Добавление...';
   
   db.collection("tests").add({
     title,
@@ -116,8 +170,15 @@ function addTest() {
   }).then(() => {
     document.getElementById("newTestTitle").value = "";
     document.getElementById("newTestNum").value = "";
+    if (messageDiv) messageDiv.innerHTML = '<div class="alert alert-success">Тест успешно создан</div>';
+    setTimeout(() => {
+      if (messageDiv) messageDiv.innerHTML = '';
+    }, 3000);
   }).catch(error => {
-    alert("Ошибка создания теста: " + error.message);
+    console.error("Ошибка создания теста:", error);
+    if (messageDiv) messageDiv.innerHTML = `<div class="alert alert-danger">Ошибка: ${error.message}</div>`;
+  }).finally(() => {
+    btn.textContent = originalText;
   });
 }
 
@@ -135,29 +196,32 @@ function openEditTest(testId) {
       
       $('#editTestModal').modal('show');
     }
+  }).catch(error => {
+    console.error("Ошибка загрузки теста:", error);
+    alert("Ошибка загрузки теста: " + error.message);
   });
 }
 
 function loadTestParts(testId) {
   const container = document.getElementById("testPartsList");
-  container.innerHTML = "<p>Загрузка частей...</p>";
+  container.innerHTML = "<p class='text-muted'>Загрузка частей...</p>";
   
-  db.collection("tests").doc(testId).collection("parts").orderBy("num").get().then(snap => {
-    container.innerHTML = "";
-    
-    if (snap.empty) {
-      container.innerHTML = "<p class='text-muted'>Частей пока нет</p>";
-      return;
-    }
-    
-    snap.forEach(doc => {
-      const part = { id: doc.id, ...doc.data() };
-      const lectureName = part.lecId ? getLectureName(part.lecId) : "Не привязана";
+  db.collection("tests").doc(testId).collection("parts").orderBy("num").get()
+    .then(snap => {
+      container.innerHTML = "";
       
-      const partDiv = document.createElement("div");
-      partDiv.className = "part-item";
-      partDiv.innerHTML = `
-        <div class="d-flex justify-content-between align-items-center">
+      if (snap.empty) {
+        container.innerHTML = "<p class='text-muted'>Частей пока нет</p>";
+        return;
+      }
+      
+      snap.forEach(doc => {
+        const part = { id: doc.id, ...doc.data() };
+        const lectureName = part.lecId ? getLectureName(part.lecId) : "Не привязана";
+        
+        const partDiv = document.createElement("div");
+        partDiv.className = "part-item d-flex justify-content-between align-items-center";
+        partDiv.innerHTML = `
           <div>
             <strong>${part.title || "Без названия"}</strong>
             <small class="text-muted ml-2">(Часть ${part.num})</small>
@@ -165,17 +229,17 @@ function loadTestParts(testId) {
             <small class="text-info">Лекция: ${lectureName}</small>
           </div>
           <div>
-            <button class="btn btn-primary btn-sm mr-2" onclick="openEditPart('${testId}', '${part.id}')">Редактировать</button>
+            <button class="btn btn-primary btn-sm mr-2" onclick="openEditPart('${testId}', '${part.id}')">Ред.</button>
             <button class="btn btn-danger btn-sm" onclick="deletePart('${testId}', '${part.id}')">Удалить</button>
           </div>
-        </div>
-      `;
-      container.appendChild(partDiv);
+        `;
+        container.appendChild(partDiv);
+      });
+    })
+    .catch(error => {
+      console.error("Ошибка загрузки частей:", error);
+      container.innerHTML = "<p class='text-danger'>Ошибка загрузки частей</p>";
     });
-  }).catch(error => {
-    console.error("Ошибка загрузки частей:", error);
-    container.innerHTML = "<p class='text-danger'>Ошибка загрузки частей</p>";
-  });
 }
 
 function getLectureName(lecId) {
@@ -235,21 +299,37 @@ function saveTestChanges() {
 
 function deleteTest(testId) {
   if (confirm("Вы уверены, что хотите удалить этот тест?")) {
-    db.collection("tests").doc(testId).delete().catch(error => {
-      alert("Ошибка удаления теста: " + error.message);
-    });
+    db.collection("tests").doc(testId).delete()
+      .then(() => {
+        console.log("Тест удален");
+      })
+      .catch(error => {
+        alert("Ошибка удаления теста: " + error.message);
+      });
   }
 }
 
+// Функции для работы с лекциями
 function addLecture() {
   const name = document.getElementById("newLectureName").value.trim();
   const num = document.getElementById("newLectureNum").value.trim();
   const url = document.getElementById("newLectureUrl").value.trim();
+  const messageDiv = document.getElementById('addLectureMessage');
   
   if (!name || !num || !url) {
-    alert("Заполните все поля");
+    if (messageDiv) messageDiv.innerHTML = '<div class="alert alert-warning">Заполните все поля</div>';
     return;
   }
+  
+  // Простая валидация URL
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    if (messageDiv) messageDiv.innerHTML = '<div class="alert alert-warning">URL должен начинаться с http:// или https://</div>';
+    return;
+  }
+  
+  const btn = document.getElementById('addLectureBtnText');
+  const originalText = btn.textContent;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Добавление...';
   
   db.collection("lections").add({
     name,
@@ -260,8 +340,15 @@ function addLecture() {
     document.getElementById("newLectureName").value = "";
     document.getElementById("newLectureNum").value = "";
     document.getElementById("newLectureUrl").value = "";
+    if (messageDiv) messageDiv.innerHTML = '<div class="alert alert-success">Лекция успешно добавлена</div>';
+    setTimeout(() => {
+      if (messageDiv) messageDiv.innerHTML = '';
+    }, 3000);
   }).catch(error => {
-    alert("Ошибка создания лекции: " + error.message);
+    console.error("Ошибка создания лекции:", error);
+    if (messageDiv) messageDiv.innerHTML = `<div class="alert alert-danger">Ошибка: ${error.message}</div>`;
+  }).finally(() => {
+    btn.textContent = originalText;
   });
 }
 
@@ -270,30 +357,38 @@ function openEditLecture(lectureId) {
     if (doc.exists) {
       const lecture = doc.data();
       const newName = prompt("Новое название лекции:", lecture.name);
-      const newNum = prompt("Новый номер лекции:", lecture.num);
-      const newUrl = prompt("Новая ссылка на лекцию:", lecture.url);
+      if (newName === null) return;
       
-      if (newName !== null && newNum !== null && newUrl !== null) {
-        db.collection("lections").doc(lectureId).update({
-          name: newName,
-          num: newNum,
-          url: newUrl
-        }).catch(error => {
-          alert("Ошибка обновления лекции: " + error.message);
-        });
-      }
+      const newNum = prompt("Новый номер лекции:", lecture.num);
+      if (newNum === null) return;
+      
+      const newUrl = prompt("Новая ссылка на лекцию:", lecture.url);
+      if (newUrl === null) return;
+      
+      db.collection("lections").doc(lectureId).update({
+        name: newName,
+        num: newNum,
+        url: newUrl
+      }).catch(error => {
+        alert("Ошибка обновления лекции: " + error.message);
+      });
     }
   });
 }
 
 function deleteLecture(lectureId) {
   if (confirm("Вы уверены, что хотите удалить эту лекцию?")) {
-    db.collection("lections").doc(lectureId).delete().catch(error => {
-      alert("Ошибка удаления лекции: " + error.message);
-    });
+    db.collection("lections").doc(lectureId).delete()
+      .then(() => {
+        console.log("Лекция удалена");
+      })
+      .catch(error => {
+        alert("Ошибка удаления лекции: " + error.message);
+      });
   }
 }
 
+// Функции для работы с частями теста
 function openEditPart(testId, partId) {
   currentTestId = testId;
   currentPartId = partId;
@@ -313,72 +408,75 @@ function openEditPart(testId, partId) {
       
       $('#editPartModal').modal('show');
     }
+  }).catch(error => {
+    console.error("Ошибка загрузки части:", error);
+    alert("Ошибка загрузки части: " + error.message);
   });
 }
 
 function loadPartQuestions(testId, partId) {
   const container = document.getElementById("partQuestionsList");
-  container.innerHTML = "<p>Загрузка вопросов...</p>";
+  container.innerHTML = "<p class='text-muted'>Загрузка вопросов...</p>";
   
-  db.collection("tests").doc(testId).collection("parts").doc(partId).collection("questions").orderBy("num").get().then(snap => {
-    container.innerHTML = "";
-    
-    if (snap.empty) {
-      container.innerHTML = "<p class='text-muted'>Вопросов пока нет</p>";
-      return;
-    }
-    
-    snap.forEach(doc => {
-      const question = { id: doc.id, ...doc.data() };
-      const answersCount = question.answers ? question.answers.length : 0;
-      const correctAnswers = question.answers ? question.answers.filter(a => a.isCorrect).length : 0;
+  db.collection("tests").doc(testId).collection("parts").doc(partId).collection("questions").orderBy("num").get()
+    .then(snap => {
+      container.innerHTML = "";
       
-      const questionDiv = document.createElement("div");
-      questionDiv.className = "question-item";
-      questionDiv.innerHTML = `
-        <div class="d-flex justify-content-between align-items-center">
+      if (snap.empty) {
+        container.innerHTML = "<p class='text-muted'>Вопросов пока нет</p>";
+        return;
+      }
+      
+      snap.forEach(doc => {
+        const question = { id: doc.id, ...doc.data() };
+        const answersCount = question.answers ? question.answers.length : 0;
+        const correctAnswers = question.answers ? question.answers.filter(a => a.isCorrect).length : 0;
+        
+        const questionDiv = document.createElement("div");
+        questionDiv.className = "question-item d-flex justify-content-between align-items-center";
+        questionDiv.innerHTML = `
           <div>
             <strong>Вопрос ${question.num}:</strong> ${question.text || "Без текста"}
             <div class="mt-1">
               <small class="text-muted">
-                Ответов: ${answersCount} | 
-                Правильных: ${correctAnswers}
+                Ответов: ${answersCount} | Правильных: ${correctAnswers}
               </small>
             </div>
           </div>
           <div>
-            <button class="btn btn-primary btn-sm mr-2" onclick="openEditQuestion('${testId}', '${partId}', '${question.id}')">Редактировать</button>
+            <button class="btn btn-primary btn-sm mr-2" onclick="openEditQuestion('${testId}', '${partId}', '${question.id}')">Ред.</button>
             <button class="btn btn-danger btn-sm" onclick="deleteQuestion('${testId}', '${partId}', '${question.id}')">Удалить</button>
           </div>
-        </div>
-      `;
-      container.appendChild(questionDiv);
+        `;
+        container.appendChild(questionDiv);
+      });
+    })
+    .catch(error => {
+      console.error("Ошибка загрузки вопросов:", error);
+      container.innerHTML = "<p class='text-danger'>Ошибка загрузки вопросов</p>";
     });
-  }).catch(error => {
-    console.error("Ошибка загрузки вопросов:", error);
-    container.innerHTML = "<p class='text-danger'>Ошибка загрузки вопросов</p>";
-  });
 }
 
 function addQuestionToPart() {
   if (!currentTestId || !currentPartId) return;
   
   const text = prompt("Введите текст вопроса:");
-  const num = prompt("Введите номер вопроса:");
+  if (!text) return;
   
-  if (text && num) {
-    db.collection("tests").doc(currentTestId).collection("parts").doc(currentPartId).collection("questions").add({
-      partId: currentPartId,
-      text,
-      num: parseInt(num),
-      answers: [],
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(() => {
-      loadPartQuestions(currentTestId, currentPartId);
-    }).catch(error => {
-      alert("Ошибка добавления вопроса: " + error.message);
-    });
-  }
+  const num = prompt("Введите номер вопроса:");
+  if (!num) return;
+  
+  db.collection("tests").doc(currentTestId).collection("parts").doc(currentPartId).collection("questions").add({
+    partId: currentPartId,
+    text,
+    num: parseInt(num),
+    answers: [],
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(() => {
+    loadPartQuestions(currentTestId, currentPartId);
+  }).catch(error => {
+    alert("Ошибка добавления вопроса: " + error.message);
+  });
 }
 
 function savePartChanges() {
@@ -425,6 +523,7 @@ function deletePart(testId, partId) {
   }
 }
 
+// Функции для работы с вопросами и ответами
 function openEditQuestion(testId, partId, questionId) {
   currentTestId = testId;
   currentPartId = partId;
@@ -440,6 +539,9 @@ function openEditQuestion(testId, partId, questionId) {
       
       $('#editQuestionModal').modal('show');
     }
+  }).catch(error => {
+    console.error("Ошибка загрузки вопроса:", error);
+    alert("Ошибка загрузки вопроса: " + error.message);
   });
 }
 
@@ -451,7 +553,7 @@ function loadQuestionAnswers(questionId, answersArray) {
     container.innerHTML = `
       <div class="alert alert-info">
         <p class="mb-2">Ответов пока нет</p>
-        <button class="btn btn-success btn-sm" onclick="addNewAnswer()">Добавить первый ответ</button>
+        <button class="btn btn-success btn-sm" onclick="addNewAnswer()">+ Добавить ответ</button>
       </div>
     `;
     return;
@@ -472,7 +574,7 @@ function loadQuestionAnswers(questionId, answersArray) {
                onchange="setCorrectAnswer(${index})">
         <label class="form-check-label">Правильный</label>
       </div>
-      <button class="btn btn-danger btn-sm" onclick="deleteAnswer(${index})" title="Удалить ответ">Удалить</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteAnswer(${index})">×</button>
     `;
     container.appendChild(answerDiv);
   });
@@ -481,7 +583,7 @@ function loadQuestionAnswers(questionId, answersArray) {
   addButtonDiv.className = "text-center mt-3";
   addButtonDiv.innerHTML = `
     <button class="btn btn-success btn-sm" onclick="addNewAnswer()">
-      Добавить вариант ответа
+      + Добавить вариант ответа
     </button>
   `;
   container.appendChild(addButtonDiv);
@@ -515,8 +617,6 @@ function addNewAnswer() {
     }).catch(error => {
       alert("Ошибка добавления ответа: " + error.message);
     });
-  } else if (text !== null) {
-    alert("Текст ответа не может быть пустым");
   }
 }
 
@@ -539,7 +639,7 @@ function updateAnswerText(answerIndex, newText) {
         });
       }
     }
-  }).then(() => {}).catch(error => {
+  }).catch(error => {
     alert("Ошибка обновления ответа: " + error.message);
   });
 }

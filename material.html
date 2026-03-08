@@ -6,43 +6,134 @@
   <title>Learn Remote - Материалы</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
   <link rel="stylesheet" href="./css/style.css">
+  <style>
+    /* Дополнительные стили для страницы материалов */
+    .material-container {
+      padding-top: 20px;
+    }
+    .nav-tabs {
+      margin-bottom: 20px;
+      border-bottom: 2px solid #dee2e6;
+    }
+    .nav-tabs .nav-link {
+      color: #495057;
+      font-weight: 500;
+      padding: 10px 20px;
+      border: none;
+      border-bottom: 2px solid transparent;
+    }
+    .nav-tabs .nav-link:hover {
+      border-color: transparent;
+      color: #17a2b8;
+    }
+    .nav-tabs .nav-link.active {
+      color: #17a2b8;
+      background-color: transparent;
+      border: none;
+      border-bottom: 2px solid #17a2b8;
+    }
+    .tab-pane {
+      padding: 20px;
+      background: white;
+      border: 1px solid #dee2e6;
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+    }
+    .create-card {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+    .create-card h4 {
+      color: #17a2b8;
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+    .section-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #2c3e50;
+      margin: 20px 0 10px;
+      border-bottom: 1px solid #17a2b8;
+      padding-bottom: 5px;
+    }
+    .test-item, .lecture-item {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      padding: 15px;
+      margin-bottom: 10px;
+    }
+    .test-item:hover, .lecture-item:hover {
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+  </style>
 </head>
 <body>
-  <div class="navbar-nav mr-auto">
-      <a class="nav-link active" href="./courses.html">Курсы</a>
-      <a class="nav-link" href="./groups.html">Группы</a>
-      <a class="nav-link" href="./notifications.html">Уведомления</a>
-      <a class="nav-link" href="./material.html">Материалы</a>
-      <a class="nav-link" href="./debtors.html">Должники</a>
-      <a class="nav-link" href="./manual-answers.html">Проверка ответов</a>
-      <a class="nav-link" href="./admin.html">Админ</a>
+  <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+    <div class="container">
+      <a class="navbar-brand font-weight-bold" href="./courses.html">Learn Remote</a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav mr-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="./courses.html">Курсы</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="./groups.html">Группы</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="./notifications.html">Уведомления</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" href="./material.html">Материалы</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="./debtors.html">Должники</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="./manual-answers.html">Проверка ответов</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="./admin.html">Админ</a>
+          </li>
+        </ul>
+        <span class="navbar-text mr-3">
+          <strong id="teacherName"></strong>
+        </span>
+        <a class="nav-link text-danger font-weight-bold" href="#" onclick="logout()">Выход</a>
+      </div>
     </div>
-    <div class="navbar-text mr-3">
-      <strong id="teacherName"></strong>
-    </div>
-    <a class="nav-link text-danger font-weight-bold" href="#" onclick="logout()">Выход</a>
   </nav>
 
-  <div class="container mt-4">
+  <div class="container material-container">
     <h2 class="mb-4">Редактор тестов и лекций</h2>
 
-    <ul class="nav nav-tabs" id="adminTabs" role="tablist">
+    <!-- Вкладки -->
+    <ul class="nav nav-tabs" id="materialTabs" role="tablist">
       <li class="nav-item">
-        <a class="nav-link active" id="tests-tab" data-toggle="tab" href="#tests" role="tab">
+        <a class="nav-link active" id="tests-tab" data-toggle="tab" href="#tests" role="tab" aria-controls="tests" aria-selected="true">
           Тесты
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" id="lectures-tab" data-toggle="tab" href="#lectures" role="tab">
+        <a class="nav-link" id="lectures-tab" data-toggle="tab" href="#lectures" role="tab" aria-controls="lectures" aria-selected="false">
           Лекции
         </a>
       </li>
     </ul>
 
-    <div class="tab-content" id="adminTabsContent">
-      <div class="tab-pane fade show active" id="tests" role="tabpanel">
+    <!-- Содержимое вкладок -->
+    <div class="tab-content" id="materialTabsContent">
+      <!-- Вкладка Тесты -->
+      <div class="tab-pane fade show active" id="tests" role="tabpanel" aria-labelledby="tests-tab">
+        <!-- Блок создания теста -->
         <div class="create-card">
-          <h4>Создать тест</h4>
+          <h4>Создать новый тест</h4>
           <div class="form-row">
             <div class="form-group col-md-5">
               <label for="newTestTitle" class="font-weight-bold">Название теста</label>
@@ -53,27 +144,33 @@
               <input type="number" id="newTestNum" class="form-control" placeholder="Порядковый номер">
             </div>
             <div class="form-group col-md-3 d-flex align-items-end">
-              <button class="btn btn-primary btn-block" onclick="addTest()">Создать тест</button>
+              <button class="btn btn-primary btn-block" onclick="addTest()">
+                <span id="addTestBtnText">Создать тест</span>
+              </button>
             </div>
           </div>
+          <div id="addTestMessage" class="mt-2"></div>
         </div>
 
+        <!-- Список тестов -->
         <div class="list-section">
           <h4 class="section-title">Список всех тестов</h4>
-          <div id="testsList">
+          <div id="testsList" class="test-list">
             <div class="text-center">
               <div class="spinner-border text-primary" role="status">
                 <span class="sr-only">Загрузка...</span>
               </div>
-              <p class="mt-2">Тесты загружаются...</p>
+              <p class="mt-2">Загрузка тестов...</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="tab-pane fade" id="lectures" role="tabpanel">
+      <!-- Вкладка Лекции -->
+      <div class="tab-pane fade" id="lectures" role="tabpanel" aria-labelledby="lectures-tab">
+        <!-- Блок создания лекции -->
         <div class="create-card">
-          <h4>Добавить лекцию</h4>
+          <h4>Добавить новую лекцию</h4>
           <div class="form-row">
             <div class="form-group col-md-4">
               <label for="newLectureName" class="font-weight-bold">Название лекции</label>
@@ -85,22 +182,26 @@
             </div>
             <div class="form-group col-md-4">
               <label for="newLectureUrl" class="font-weight-bold">Ссылка на лекцию</label>
-              <input type="text" id="newLectureUrl" class="form-control" placeholder="https://...">
+              <input type="url" id="newLectureUrl" class="form-control" placeholder="https://...">
             </div>
             <div class="form-group col-md-2 d-flex align-items-end">
-              <button class="btn btn-primary btn-block" onclick="addLecture()">Добавить</button>
+              <button class="btn btn-primary btn-block" onclick="addLecture()">
+                <span id="addLectureBtnText">Добавить</span>
+              </button>
             </div>
           </div>
+          <div id="addLectureMessage" class="mt-2"></div>
         </div>
 
+        <!-- Список лекций -->
         <div class="list-section">
           <h4 class="section-title">Список всех лекций</h4>
-          <div id="lecturesList">
+          <div id="lecturesList" class="lecture-list">
             <div class="text-center">
               <div class="spinner-border text-primary" role="status">
                 <span class="sr-only">Загрузка...</span>
               </div>
-              <p class="mt-2">Лекции загружаются...</p>
+              <p class="mt-2">Загрузка лекций...</p>
             </div>
           </div>
         </div>
@@ -108,6 +209,8 @@
     </div>
   </div>
 
+  <!-- Модальные окна (оставляем как в оригинале) -->
+  <!-- Модальное окно для редактирования теста -->
   <div class="modal fade" id="editTestModal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg" role="document">
       <div class="modal-content">
@@ -126,9 +229,9 @@
           </div>
           
           <div class="section-title">Части теста</div>
-          <div id="testPartsList"></div>
+          <div id="testPartsList" class="mb-3"></div>
           
-          <button class="btn btn-success btn-sm mt-2" onclick="addPartToTest()">Добавить часть</button>
+          <button class="btn btn-success btn-sm" onclick="addPartToTest()">+ Добавить часть</button>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
@@ -138,6 +241,7 @@
     </div>
   </div>
 
+  <!-- Модальное окно для редактирования части теста -->
   <div class="modal fade" id="editPartModal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg" role="document">
       <div class="modal-content">
@@ -163,9 +267,9 @@
           </div>
           
           <div class="section-title">Вопросы</div>
-          <div id="partQuestionsList"></div>
+          <div id="partQuestionsList" class="mb-3"></div>
           
-          <button class="btn btn-success btn-sm mt-2" onclick="addQuestionToPart()">Добавить вопрос</button>
+          <button class="btn btn-success btn-sm" onclick="addQuestionToPart()">+ Добавить вопрос</button>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
@@ -175,6 +279,7 @@
     </div>
   </div>
 
+  <!-- Модальное окно для редактирования вопроса -->
   <div class="modal fade" id="editQuestionModal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg" role="document">
       <div class="modal-content">
@@ -193,7 +298,7 @@
           </div>
           
           <div class="section-title">Варианты ответов</div>
-          <div id="questionAnswersList"></div>
+          <div id="questionAnswersList" class="mb-3"></div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
@@ -203,11 +308,11 @@
     </div>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="./js/material.js"></script>
 </body>
 </html>
