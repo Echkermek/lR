@@ -5,30 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Learn Remote - Группы</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
-  <style>
-    body { padding-top: 80px; background-color: #f8f9fa; }
-    .btn-primary { background-color: #17a2b8; border-color: #17a2b8; }
-    .group-item { 
-      margin-bottom: 10px;
-      cursor: pointer;
-    }
-    .group-item:hover { background-color: #f8f9fa; }
-  </style>
+  <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
   <nav class="navbar navbar-expand-md navbar-light bg-light fixed-top">
     <a class="navbar-brand font-weight-bold" href="./courses.html">Learn Remote</a>
     <div class="navbar-nav mr-auto">
-      <a class="nav-link" href="./courses.html">Курсы</a>
+      <a class="nav-link active" href="./courses.html">Курсы</a>
       <a class="nav-link" href="./groups.html">Группы</a>
       <a class="nav-link" href="./notifications.html">Уведомления</a>
       <a class="nav-link" href="./material.html">Материалы</a>
-      <a class="nav-link active" href="./admin.html">Админ</a>
+      <a class="nav-link" href="./debtors.html">Должники</a>
+      <a class="nav-link" href="./manual-answers.html">Проверка ответов</a>
+      <a class="nav-link" href="./admin.html">Админ</a>
     </div>
     <div class="navbar-text mr-3">
       <strong id="teacherName"></strong>
     </div>
-    <a class="nav-link text-danger font-weight-bold" href="#" onclick="logout()">Exit</a>
+    <a class="nav-link text-danger font-weight-bold" href="#" onclick="logout()">Выход</a>
   </nav>
 
   <div class="container">
@@ -39,15 +33,14 @@
         <h5 class="mb-0">Список групп</h5>
       </div>
       <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-          <thead class="thead-light">
-            <tr>
-              <th>Название группы</th>
-              <th width="120">Действия</th>
-            </tr>
-          </thead>
-          <tbody id="groupsBody"></tbody>
-        </table>
+        <div id="groupsList" class="p-3">
+          <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+              <span class="sr-only">Загрузка...</span>
+            </div>
+            <p class="mt-2">Загрузка групп...</p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -62,6 +55,7 @@
             <button class="btn btn-primary" onclick="addGroup()">Добавить группу</button>
           </div>
         </div>
+        <div id="addGroupMessage" class="mt-2"></div>
       </div>
     </div>
   </div>
@@ -71,78 +65,17 @@
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="./js/scripts.js"></script>
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyD2QJQcuUI9lCJP_kqp5tW24J8TN6phPWw",
-      authDomain: "prob1-5c047.firebaseapp.com",
-      projectId: "prob1-5c047",
-      storageBucket: "prob1-5c047.appspot.com",
-      messagingSenderId: "1083579621866",
-      appId: "1:1083579621866:web:73f214d8fd992f0d52d293"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    if (!localStorage.getItem('teacherId')) {
-      window.location.href = './login.html';
-    }
-
-    function logout() {
-      localStorage.removeItem('teacherId');
-      window.location.href = './login.html';
-    }
-
-    const tbody = document.getElementById("groupsBody");
-    
-    db.collection("groups").orderBy("name").onSnapshot(snap => {
-      tbody.innerHTML = "";
-      
-      if (snap.empty) {
-        tbody.innerHTML = `<tr><td colspan="2" class="text-center text-muted">Нет групп</td></tr>`;
-        return;
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Страница групп загружена');
+      if (typeof initGroupsPage === 'function') {
+        initGroupsPage();
+      } else {
+        console.error('Функция initGroupsPage не найдена');
       }
-      
-      snap.forEach(doc => {
-        const g = doc.data();
-        const tr = document.createElement("tr");
-        tr.className = "group-item";
-        tr.innerHTML = `
-          <td onclick="showGroupCourses('${doc.id}', '${g.name}')">${g.name}</td>
-          <td>
-            <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteGroup('${doc.id}')">Удалить</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
     });
-
-    function addGroup() {
-      const name = document.getElementById("newGroupName").value.trim();
-      if (!name) {
-        alert("Введите название группы");
-        return;
-      }
-      
-      db.collection("groups").add({name}).then(() => {
-        document.getElementById("newGroupName").value = "";
-      }).catch(error => {
-        alert("Ошибка создания группы: " + error.message);
-      });
-    }
-    
-    function deleteGroup(id) {
-      if (confirm("Вы уверены, что хотите удалить эту группу?")) {
-        db.collection("groups").doc(id).delete().catch(error => {
-          alert("Ошибка удаления группы: " + error.message);
-        });
-      }
-    }
-
-    function showGroupCourses(groupId, groupName) {
-      localStorage.setItem('currentGroupId', groupId);
-      localStorage.setItem('currentGroupName', groupName);
-      window.location.href = './group-courses.html';
-    }
   </script>
 </body>
 </html>

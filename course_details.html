@@ -5,94 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Learn Remote - Детали курса</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
-  <style>
-    body { padding-top: 80px; background-color: #f8f9fa; }
-    .btn-primary { background-color: #17a2b8; border-color: #17a2b8; }
-    .section-title { 
-      font-size: 1.4rem; 
-      font-weight: bold; 
-      margin: 25px 0 15px; 
-      border-bottom: 1px solid #dee2e6; 
-      padding-bottom: 8px; 
-    }
-    .lecture-item, .test-item, .part-item { 
-      margin-bottom: 10px;
-    }
-    .lecture-item { 
-      padding: 12px; 
-      background: #f0f8ff; 
-      border-left: 3px solid #17a2b8;
-      transition: all 0.2s ease;
-    }
-    .lecture-item.selected { 
-      background: #d4edda; 
-      border-left: 3px solid #28a745;
-    }
-    .test-item { 
-      padding: 15px; 
-      background: #f0f8ff; 
-      border: 1px solid #b0d4f1;
-      border-left: 3px solid #17a2b8;
-      transition: all 0.2s ease;
-    }
-    .test-item.selected { 
-      background: #d4edda; 
-      border-left: 3px solid #28a745;
-    }
-    .part-item { 
-      padding: 10px; 
-      background: white; 
-      border-left: 3px solid #17a2b8; 
-      margin: 8px 0; 
-    }
-    .course-info-card {
-      border-left: 3px solid #17a2b8;
-    }
-    .assigned-group {
-      background: #e8f5e8;
-      border-radius: 15px;
-      padding: 5px 12px;
-      display: inline-block;
-      margin: 3px;
-    }
-    .add-item-card {
-      background: #efeeee;
-      border: 1px dashed #ffffff;
-    }
-    .selection-controls {
-      background: #f8f9fa;
-      padding: 10px;
-      border-radius: 5px;
-      margin-bottom: 15px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .item-checkbox {
-      margin-right: 10px;
-      transform: scale(1.2);
-    }
-    .item-content {
-      flex-grow: 1;
-      cursor: pointer;
-    }
-    .lecture-item:hover, .test-item:hover {
-      background: #e3f2fd;
-    }
-    .lecture-item.selected:hover, .test-item.selected:hover {
-      background: #c3e6cb;
-    }
-  </style>
+  <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
   <nav class="navbar navbar-expand-md navbar-light bg-light fixed-top">
     <a class="navbar-brand font-weight-bold" href="./courses.html">Learn Remote</a>
     <div class="navbar-nav mr-auto">
-      <a class="nav-link" href="./courses.html">Курсы</a>
+      <a class="nav-link active" href="./courses.html">Курсы</a>
       <a class="nav-link" href="./groups.html">Группы</a>
       <a class="nav-link" href="./notifications.html">Уведомления</a>
       <a class="nav-link" href="./material.html">Материалы</a>
-      <a class="nav-link active" href="./admin.html">Админ</a>
+      <a class="nav-link" href="./debtors.html">Должники</a>
+      <a class="nav-link" href="./manual-answers.html">Проверка ответов</a>
+      <a class="nav-link" href="./admin.html">Админ</a>
     </div>
     <div class="navbar-text mr-3">
       <strong id="teacherName"></strong>
@@ -101,11 +26,24 @@
   </nav>
 
   <div class="container">
-    <button class="btn btn-secondary mb-3" onclick="history.back()">Назад к курсам</button>
-    <h3 class="mb-4" id="courseName">Курс: Загрузка...</h3>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <button class="btn btn-secondary" onclick="history.back()">Назад к курсам</button>
+      <div>
+        <button class="btn btn-danger complete-course-btn" onclick="confirmCompleteCourse()" id="completeCourseBtn">
+          Завершить курс
+        </button>
+        <button class="btn btn-outline-danger ml-2" onclick="confirmDeleteCourse()" id="deleteCourseBtn">
+          Удалить курс
+        </button>
+      </div>
+    </div>
+    
+    <h3 class="mb-4" id="courseName">
+      Курс: Загрузка...
+      <span id="completedBadge" class="badge-completed" style="display: none;">Завершен</span>
+    </h3>
 
-    <!-- Информация о курсе и назначение группы -->
-    <div class="card mb-4 course-info-card">
+    <div class="card mb-4 course-info-card" id="courseInfoCard">
       <div class="card-header bg-info text-white">
         <h5 class="mb-0">Информация о курсе</h5>
       </div>
@@ -136,7 +74,7 @@
                 <input type="number" id="semesterInput" class="form-control" placeholder="Семестр" min="1" max="12">
               </div>
               <div class="form-group col-md-2 d-flex align-items-end">
-                <button class="btn btn-primary w-100" onclick="assignGroupToCourse()">Добавить</button>
+                <button class="btn btn-primary w-100" onclick="assignGroupToCourse()" id="assignGroupBtn">Добавить</button>
               </div>
             </div>
           </div>
@@ -144,27 +82,48 @@
       </div>
     </div>
 
-    <!-- Лекции -->
-    <div class="section-title">Лекции</div>
-    
-    <!-- Множественный выбор лекций -->
-    <div class="selection-controls" id="lectureSelectionControls" style="display: none;">
-      <button class="btn btn-outline-primary" onclick="selectAllLectures()">Выбрать все</button>
-      <button class="btn btn-outline-secondary" onclick="deselectAllLectures()">Снять все</button>
-      <button class="btn btn-success" onclick="addSelectedLectures()">
-        <span id="addLecturesBtnText">Добавить выбранные лекции</span>
-        <span id="selectedLecturesCount" class="badge badge-light ml-2">0</span>
-      </button>
-    </div>
-    
-    <!-- Список доступных лекций с чекбоксами -->
-    <div class="card mb-3">
-      <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">Доступные лекции</h6>
-        <span class="badge badge-light" id="availableLecturesCount">0</span>
-      </div>
-      <div class="card-body p-0">
-        <div id="availableLecturesList" class="p-3">
+    <ul class="nav nav-tabs" id="myTab" role="tablist">
+      <li class="nav-item">
+        <a class="nav-link active" id="lectures-tab" data-toggle="tab" href="#lectures" role="tab" aria-controls="lectures" aria-selected="true">
+           Лекции
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="tests-tab" data-toggle="tab" href="#tests" role="tab" aria-controls="tests" aria-selected="false">
+           Тесты
+        </a>
+      </li>
+    </ul>
+
+    <div class="tab-content" id="myTabContent">
+      <div class="tab-pane fade show active" id="lectures" role="tabpanel" aria-labelledby="lectures-tab">
+        <div class="card mb-3 add-item-card" id="addLecturesCard">
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-group col-md-10">
+                <label>Выберите лекции:</label>
+                <div class="dropdown-checkbox">
+                  <button class="btn btn-light border dropdown-toggle" type="button" id="lectureDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span id="selectedLecturesText">Выберите лекции...</span>
+                  </button>
+                  <div class="dropdown-menu" aria-labelledby="lectureDropdown" id="lectureDropdownMenu">
+                    <div class="text-center" id="lectureLoading">
+                      <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                      <span class="ml-2">Загрузка лекций...</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-group col-md-2 d-flex align-items-end">
+                <button class="btn btn-success w-100" onclick="addSelectedLectures()" id="addLecturesBtn">
+                  <span id="addLecturesBtnText">Добавить</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="lecturesContainer">
           <div class="text-center">
             <div class="spinner-border text-primary" role="status">
               <span class="sr-only">Загрузка...</span>
@@ -173,63 +132,35 @@
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Привязанные лекции -->
-    <div class="card mb-3">
-      <div class="card-header bg-info text-white">
-        <h6 class="mb-0">Привязанные лекции</h6>
-      </div>
-      <div class="card-body p-0">
-        <div id="assignedLecturesList" class="p-3">
-          <div class="text-center">
-            <div class="spinner-border text-primary" role="status">
-              <span class="sr-only">Загрузка...</span>
+      <div class="tab-pane fade" id="tests" role="tabpanel" aria-labelledby="tests-tab">
+        <div class="card mb-3 add-item-card" id="addTestsCard">
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-group col-md-10">
+                <label>Выберите тесты:</label>
+                <div class="dropdown-checkbox">
+                  <button class="btn btn-light border dropdown-toggle" type="button" id="testDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span id="selectedTestsText">Выберите тесты...</span>
+                  </button>
+                  <div class="dropdown-menu" aria-labelledby="testDropdown" id="testDropdownMenu">
+                    <div class="text-center" id="testLoading">
+                      <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                      <span class="ml-2">Загрузка тестов...</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-group col-md-2 d-flex align-items-end">
+                <button class="btn btn-success w-100" onclick="addSelectedTests()" id="addTestsBtn">
+                  <span id="addTestsBtnText"> Добавить</span>
+                </button>
+              </div>
             </div>
-            <p class="mt-2">Лекции загружаются...</p>
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- Тесты -->
-    <div class="section-title">Тесты и разделы</div>
-    
-    <!-- Множественный выбор тестов -->
-    <div class="selection-controls" id="testSelectionControls" style="display: none;">
-      <button class="btn btn-outline-primary" onclick="selectAllTests()">Выбрать все</button>
-      <button class="btn btn-outline-secondary" onclick="deselectAllTests()">Снять все</button>
-      <button class="btn btn-success" onclick="addSelectedTests()">
-        <span id="addTestsBtnText">Добавить выбранные тесты</span>
-        <span id="selectedTestsCount" class="badge badge-light ml-2">0</span>
-      </button>
-    </div>
-    
-    <!-- Список доступных тестов с чекбоксами -->
-    <div class="card mb-3">
-      <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">Доступные тесты</h6>
-        <span class="badge badge-light" id="availableTestsCount">0</span>
-      </div>
-      <div class="card-body p-0">
-        <div id="availableTestsList" class="p-3">
-          <div class="text-center">
-            <div class="spinner-border text-primary" role="status">
-              <span class="sr-only">Загрузка...</span>
-            </div>
-            <p class="mt-2">Тесты загружаются...</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Привязанные тесты -->
-    <div class="card mb-3">
-      <div class="card-header bg-info text-white">
-        <h6 class="mb-0">Привязанные тесты</h6>
-      </div>
-      <div class="card-body p-0">
-        <div id="assignedTestsList" class="p-3">
+        
+        <div id="testsContainer">
           <div class="text-center">
             <div class="spinner-border text-primary" role="status">
               <span class="sr-only">Загрузка...</span>
@@ -241,608 +172,63 @@
     </div>
   </div>
 
+  <div class="modal fade" id="completeCourseModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">Завершение курса</h5>
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>Вы уверены, что хотите завершить этот курс?</p>
+          <p class="text-primary"><strong>Важно:</strong> После завершения курса:</p>
+          <ul class="text-primary">
+            <li>Студенты с неудовлетворительными оценками будут добавлены в список должников</li>
+            <li>Курс будет перемещен во вкладку "Завершенные курсы"</li>
+            <li>Вы больше не сможете редактировать материалы курса</li>
+          </ul>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Отмена</button>
+          <button type="button" class="btn btn-primary" onclick="completeCourse()" id="confirmCompleteBtn">
+            Завершить курс
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="deleteCourseModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">Удаление курса</h5>
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="text-primary"><strong>Вы уверены, что хотите удалить этот курс?</strong></p>
+          <p>Это действие нельзя отменить. Будут удалены:</p>
+          <ul>
+            <li>Все связи курса с группами</li>
+            <li>Все привязанные лекции и тесты</li>
+            <li>Все записи о долгах по этому курсу</li>
+          </ul>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Отмена</button>
+          <button type="button" class="btn btn-primary" onclick="deleteCourse()" id="confirmDeleteBtn">
+            Удалить курс
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
-  
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyD2QJQcuUI9lCJP_kqp5tW24J8TN6phPWw",
-      authDomain: "prob1-5c047.firebaseapp.com",
-      projectId: "prob1-5c047",
-      storageBucket: "prob1-5c047.appspot.com",
-      messagingSenderId: "1083579621866",
-      appId: "1:1083579621866:web:73f214d8fd992f0d52d293"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    if (!localStorage.getItem('teacherId')) {
-      window.location.href = './login.html';
-    }
-
-    function logout() {
-      localStorage.removeItem('teacherId');
-      window.location.href = './login.html';
-    }
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const courseId = urlParams.get('id');
-    
-    if (!courseId) {
-      alert("Нет ID курса");
-      history.back();
-    }
-
-    // Состояние выбранных элементов
-    let selectedLectures = new Set();
-    let selectedTests = new Set();
-    
-    // Карта уже привязанных элементов
-    let assignedLecturesMap = new Map();
-    let assignedTestsMap = new Map();
-
-    // Название курса
-    db.collection("courses").doc(courseId).onSnapshot(doc => {
-      if (doc.exists) {
-        const courseData = doc.data();
-        document.getElementById("courseName").textContent = "Курс: " + (courseData.name || "Без названия");
-      } else {
-        document.getElementById("courseName").textContent = "Курс не найден";
-      }
-    });
-
-    // Загрузка всех групп для выпадающего списка
-    db.collection("groups").orderBy("name").onSnapshot(snap => {
-      const groupSelect = document.getElementById("groupSelect");
-      groupSelect.innerHTML = '<option value="">Выберите группу</option>';
-      
-      if (snap.empty) {
-        groupSelect.innerHTML = '<option value="">Нет доступных групп</option>';
-        return;
-      }
-      
-      snap.forEach(doc => {
-        const group = doc.data();
-        groupSelect.innerHTML += `<option value="${doc.id}">${group.name}</option>`;
-      });
-    });
-
-    // Загрузка всех тестов для множественного выбора
-    db.collection("tests").orderBy("num").onSnapshot(snap => {
-      const container = document.getElementById("availableTestsList");
-      const countSpan = document.getElementById("availableTestsCount");
-      
-      if (snap.empty) {
-        container.innerHTML = '<p class="text-muted text-center">Нет доступных тестов</p>';
-        countSpan.textContent = '0';
-        return;
-      }
-      
-      let html = '';
-      let index = 0;
-      
-      snap.forEach(doc => {
-        const test = doc.data();
-        const testId = doc.id;
-        const isAssigned = assignedTestsMap.has(testId);
-        
-        html += `
-          <div class="test-item d-flex align-items-center ${isAssigned ? 'bg-light text-muted' : ''}" data-test-id="${testId}">
-            <input type="checkbox" class="item-checkbox test-checkbox" 
-                   data-test-id="${testId}" 
-                   ${isAssigned ? 'disabled' : ''}
-                   onchange="updateTestSelection('${testId}', this.checked)">
-            <div class="item-content" onclick="toggleTestCheckbox('${testId}')">
-              <strong>${test.title || "Без названия"}</strong>
-              <small class="text-muted ml-2">(Тест ${test.num || "не указан"})</small>
-              ${isAssigned ? '<span class="badge badge-success ml-2">Уже привязан</span>' : ''}
-            </div>
-          </div>
-        `;
-        index++;
-      });
-      
-      container.innerHTML = html;
-      countSpan.textContent = snap.size.toString();
-      
-      // Показываем/скрываем кнопки выбора в зависимости от наличия доступных тестов
-      document.getElementById("testSelectionControls").style.display = 
-        snap.size > 0 ? 'flex' : 'none';
-    });
-
-    // Загрузка всех лекций для множественного выбора
-    db.collection("lections").orderBy("num").onSnapshot(snap => {
-      const container = document.getElementById("availableLecturesList");
-      const countSpan = document.getElementById("availableLecturesCount");
-      
-      if (snap.empty) {
-        container.innerHTML = '<p class="text-muted text-center">Нет доступных лекций</p>';
-        countSpan.textContent = '0';
-        return;
-      }
-      
-      let html = '';
-      let index = 0;
-      
-      snap.forEach(doc => {
-        const lecture = doc.data();
-        const lectureId = doc.id;
-        const isAssigned = assignedLecturesMap.has(lectureId);
-        
-        html += `
-          <div class="lecture-item d-flex align-items-center ${isAssigned ? 'bg-light text-muted' : ''}" data-lecture-id="${lectureId}">
-            <input type="checkbox" class="item-checkbox lecture-checkbox" 
-                   data-lecture-id="${lectureId}" 
-                   ${isAssigned ? 'disabled' : ''}
-                   onchange="updateLectureSelection('${lectureId}', this.checked)">
-            <div class="item-content" onclick="toggleLectureCheckbox('${lectureId}')">
-              <strong>${lecture.name || "Без названия"}</strong>
-              <small class="text-muted ml-2">(Лекция ${lecture.num || "не указана"})</small>
-              ${isAssigned ? '<span class="badge badge-success ml-2">Уже привязана</span>' : ''}
-            </div>
-          </div>
-        `;
-        index++;
-      });
-      
-      container.innerHTML = html;
-      countSpan.textContent = snap.size.toString();
-      
-      // Показываем/скрываем кнопки выбора в зависимости от наличия доступных лекций
-      document.getElementById("lectureSelectionControls").style.display = 
-        snap.size > 0 ? 'flex' : 'none';
-    });
-
-    // Загрузка назначенных групп для курса
-    function loadAssignedGroups() {
-      db.collection("course_groups")
-        .where("courseId", "==", courseId)
-        .onSnapshot(snap => {
-          const assignedGroupsContainer = document.getElementById("assignedGroups");
-          assignedGroupsContainer.innerHTML = "";
-          
-          if (snap.empty) {
-            assignedGroupsContainer.innerHTML = '<p class="text-muted">Группы не назначены</p>';
-            return;
-          }
-
-          const groupPromises = [];
-          const courseGroups = [];
-          
-          snap.forEach(doc => {
-            const courseGroup = doc.data();
-            courseGroup.id = doc.id;
-            courseGroups.push(courseGroup);
-            
-            const groupPromise = db.collection("groups").doc(courseGroup.groupId).get();
-            groupPromises.push(groupPromise);
-          });
-
-          Promise.all(groupPromises).then(groupSnaps => {
-            assignedGroupsContainer.innerHTML = "";
-            
-            groupSnaps.forEach((groupSnap, index) => {
-              if (groupSnap.exists) {
-                const groupData = groupSnap.data();
-                const courseGroup = courseGroups[index];
-                
-                const groupBadge = document.createElement("div");
-                groupBadge.className = "assigned-group";
-                groupBadge.innerHTML = `
-                  <strong>${groupData.name}</strong>
-                  <small class="text-muted ml-2">Семестр: ${courseGroup.semester}</small>
-                  <button class="btn btn-sm btn-outline-danger ml-2" onclick="removeGroupFromCourse('${courseGroup.id}')">×</button>
-                `;
-                assignedGroupsContainer.appendChild(groupBadge);
-              }
-            });
-          });
-        });
-    }
-
-    // Загрузка привязанных тестов
-    function loadAssignedTests() {
-      db.collection("test_course")
-        .where("courseId", "==", courseId)
-        .onSnapshot(async (snap) => {
-          const container = document.getElementById("assignedTestsList");
-          assignedTestsMap.clear();
-          
-          if (snap.empty) {
-            container.innerHTML = "<p class='text-muted text-center'>К курсу не привязано тестов</p>";
-            return;
-          }
-
-          const testPromises = [];
-          const testCourseData = [];
-          
-          snap.forEach(doc => {
-            const testCourse = doc.data();
-            testCourse.id = doc.id;
-            testCourseData.push(testCourse);
-            assignedTestsMap.set(testCourse.testId, testCourse.id);
-            
-            const testPromise = db.collection("tests").doc(testCourse.testId).get();
-            testPromises.push(testPromise);
-          });
-
-          try {
-            const testSnaps = await Promise.all(testPromises);
-            container.innerHTML = "";
-            
-            testSnaps.forEach((testSnap, index) => {
-              if (testSnap.exists) {
-                const testData = testSnap.data();
-                const testCourse = testCourseData[index];
-                
-                const testDiv = document.createElement("div");
-                testDiv.className = "test-item";
-                testDiv.innerHTML = `
-                  <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                      <h5 class="text-primary mb-3">${testData.title || "Без названия теста"}</h5>
-                      <div id="parts-${testSnap.id}">
-                        <div class="text-muted">Загрузка разделов...</div>
-                      </div>
-                    </div>
-                    <div>
-                      <button class="btn btn-outline-danger btn-sm" onclick="removeTestFromCourse('${testCourse.id}')">
-                        Удалить
-                      </button>
-                    </div>
-                  </div>
-                `;
-                container.appendChild(testDiv);
-                
-                loadTestParts(testSnap.id, testData);
-              }
-            });
-          } catch (error) {
-            console.error("Ошибка загрузки тестов:", error);
-            container.innerHTML = `<p class="text-danger text-center">Ошибка загрузки тестов: ${error.message}</p>`;
-          }
-        });
-    }
-
-    // Загрузка привязанных лекций
-    function loadAssignedLectures() {
-      db.collection("lecture_course")
-        .where("courseId", "==", courseId)
-        .onSnapshot(async (snap) => {
-          const container = document.getElementById("assignedLecturesList");
-          assignedLecturesMap.clear();
-          
-          if (snap.empty) {
-            container.innerHTML = "<p class='text-muted text-center'>К курсу не привязано лекций</p>";
-            return;
-          }
-
-          const lecturePromises = [];
-          const lectureCourseData = [];
-          
-          snap.forEach(doc => {
-            const lectureCourse = doc.data();
-            lectureCourse.id = doc.id;
-            lectureCourseData.push(lectureCourse);
-            assignedLecturesMap.set(lectureCourse.lectureId, lectureCourse.id);
-            
-            const lecturePromise = db.collection("lections").doc(lectureCourse.lectureId).get();
-            lecturePromises.push(lecturePromise);
-          });
-
-          try {
-            const lectureSnaps = await Promise.all(lecturePromises);
-            container.innerHTML = "";
-            
-            lectureSnaps.forEach((lectureSnap, index) => {
-              if (lectureSnap.exists) {
-                const lectureData = lectureSnap.data();
-                const lectureCourse = lectureCourseData[index];
-                
-                const div = document.createElement("div");
-                div.className = "lecture-item";
-                div.innerHTML = `
-                  <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                      <strong>${lectureData.name || "Без названия"}</strong>
-                      ${lectureData.num ? `<small class="text-muted"> — №${lectureData.num}</small>` : ""}
-                      ${lectureData.url ? `<br><a href="${lectureData.url}" target="_blank" class="text-success">Открыть материал</a>` : ""}
-                    </div>
-                    <button class="btn btn-outline-danger btn-sm" onclick="removeLectureFromCourse('${lectureCourse.id}')">
-                      Удалить
-                    </button>
-                  </div>
-                `;
-                container.appendChild(div);
-              }
-            });
-          } catch (error) {
-            console.error("Ошибка загрузки лекций:", error);
-            container.innerHTML = `<p class="text-danger text-center">Ошибка загрузки лекций: ${error.message}</p>`;
-          }
-        });
-    }
-
-    async function loadTestParts(testId, testData) {
-      const partsContainer = document.getElementById(`parts-${testId}`);
-      
-      try {
-        const partsSnap = await db.collection("tests").doc(testId).collection("parts").orderBy("num").get();
-        
-        if (partsSnap.empty) {
-          partsContainer.innerHTML = `<p class="ml-3 text-muted">Нет разделов</p>`;
-        } else {
-          partsContainer.innerHTML = "";
-          partsSnap.forEach(partDoc => {
-            const part = partDoc.data();
-            const partDiv = document.createElement("div");
-            partDiv.className = "part-item";
-            partDiv.innerHTML = `
-              <strong>Часть ${part.num}: ${part.title}</strong>
-            `;
-            partsContainer.appendChild(partDiv);
-          });
-        }
-      } catch (error) {
-        partsContainer.innerHTML = `<p class="text-danger">Ошибка загрузки разделов</p>`;
-      }
-    }
-
-    // Функции для работы с множественным выбором лекций
-    function updateLectureSelection(lectureId, isSelected) {
-      if (isSelected) {
-        selectedLectures.add(lectureId);
-      } else {
-        selectedLectures.delete(lectureId);
-      }
-      updateSelectedLecturesCount();
-    }
-
-    function toggleLectureCheckbox(lectureId) {
-      const checkbox = document.querySelector(`.lecture-checkbox[data-lecture-id="${lectureId}"]`);
-      if (checkbox && !checkbox.disabled) {
-        checkbox.checked = !checkbox.checked;
-        updateLectureSelection(lectureId, checkbox.checked);
-      }
-    }
-
-    function selectAllLectures() {
-      document.querySelectorAll('.lecture-checkbox:not(:disabled)').forEach(checkbox => {
-        checkbox.checked = true;
-        updateLectureSelection(checkbox.dataset.lectureId, true);
-      });
-    }
-
-    function deselectAllLectures() {
-      document.querySelectorAll('.lecture-checkbox').forEach(checkbox => {
-        checkbox.checked = false;
-        if (!checkbox.disabled) {
-          updateLectureSelection(checkbox.dataset.lectureId, false);
-        }
-      });
-    }
-
-    function updateSelectedLecturesCount() {
-      const count = selectedLectures.size;
-      document.getElementById('selectedLecturesCount').textContent = count;
-      const btnText = document.getElementById('addLecturesBtnText');
-      btnText.textContent = count > 0 ? `Добавить выбранные лекции (${count})` : 'Добавить выбранные лекции';
-    }
-
-    // Функции для работы с множественным выбором тестов
-    function updateTestSelection(testId, isSelected) {
-      if (isSelected) {
-        selectedTests.add(testId);
-      } else {
-        selectedTests.delete(testId);
-      }
-      updateSelectedTestsCount();
-    }
-
-    function toggleTestCheckbox(testId) {
-      const checkbox = document.querySelector(`.test-checkbox[data-test-id="${testId}"]`);
-      if (checkbox && !checkbox.disabled) {
-        checkbox.checked = !checkbox.checked;
-        updateTestSelection(testId, checkbox.checked);
-      }
-    }
-
-    function selectAllTests() {
-      document.querySelectorAll('.test-checkbox:not(:disabled)').forEach(checkbox => {
-        checkbox.checked = true;
-        updateTestSelection(checkbox.dataset.testId, true);
-      });
-    }
-
-    function deselectAllTests() {
-      document.querySelectorAll('.test-checkbox').forEach(checkbox => {
-        checkbox.checked = false;
-        if (!checkbox.disabled) {
-          updateTestSelection(checkbox.dataset.testId, false);
-        }
-      });
-    }
-
-    function updateSelectedTestsCount() {
-      const count = selectedTests.size;
-      document.getElementById('selectedTestsCount').textContent = count;
-      const btnText = document.getElementById('addTestsBtnText');
-      btnText.textContent = count > 0 ? `Добавить выбранные тесты (${count})` : 'Добавить выбранные тесты';
-    }
-
-    // Добавление выбранных лекций
-    async function addSelectedLectures() {
-      if (selectedLectures.size === 0) {
-        alert('Выберите хотя бы одну лекцию');
-        return;
-      }
-
-      const addBtn = document.getElementById('addLecturesBtnText');
-      const originalText = addBtn.textContent;
-      addBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Добавление...';
-
-      try {
-        const promises = [];
-        
-        for (const lectureId of selectedLectures) {
-          // Проверяем, не привязана ли уже лекция
-          const existing = await db.collection("lecture_course")
-            .where("courseId", "==", courseId)
-            .where("lectureId", "==", lectureId)
-            .get();
-          
-          if (existing.empty) {
-            promises.push(
-              db.collection("lecture_course").add({
-                courseId: courseId,
-                lectureId: lectureId,
-                assignedAt: firebase.firestore.FieldValue.serverTimestamp()
-              })
-            );
-          }
-        }
-
-        await Promise.all(promises);
-        
-        // Очищаем выбор
-        selectedLectures.clear();
-        deselectAllLectures();
-        
-        alert(`Успешно добавлено ${promises.length} лекций`);
-        
-      } catch (error) {
-        console.error("Ошибка добавления лекций:", error);
-        alert("Ошибка добавления лекций: " + error.message);
-      } finally {
-        addBtn.innerHTML = originalText;
-        updateSelectedLecturesCount();
-      }
-    }
-
-    // Добавление выбранных тестов
-    async function addSelectedTests() {
-      if (selectedTests.size === 0) {
-        alert('Выберите хотя бы один тест');
-        return;
-      }
-
-      const addBtn = document.getElementById('addTestsBtnText');
-      const originalText = addBtn.textContent;
-      addBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Добавление...';
-
-      try {
-        const promises = [];
-        
-        for (const testId of selectedTests) {
-          // Проверяем, не привязан ли уже тест
-          const existing = await db.collection("test_course")
-            .where("courseId", "==", courseId)
-            .where("testId", "==", testId)
-            .get();
-          
-          if (existing.empty) {
-            promises.push(
-              db.collection("test_course").add({
-                courseId: courseId,
-                testId: testId,
-                assignedAt: firebase.firestore.FieldValue.serverTimestamp()
-              })
-            );
-          }
-        }
-
-        await Promise.all(promises);
-        
-        // Очищаем выбор
-        selectedTests.clear();
-        deselectAllTests();
-        
-        alert(`Успешно добавлено ${promises.length} тестов`);
-        
-      } catch (error) {
-        console.error("Ошибка добавления тестов:", error);
-        alert("Ошибка добавления тестов: " + error.message);
-      } finally {
-        addBtn.innerHTML = originalText;
-        updateSelectedTestsCount();
-      }
-    }
-
-    // Назначение группы курсу
-    function assignGroupToCourse() {
-      const groupId = document.getElementById("groupSelect").value;
-      const semester = document.getElementById("semesterInput").value;
-      
-      if (!groupId) {
-        alert("Выберите группу");
-        return;
-      }
-      
-      if (!semester) {
-        alert("Введите номер семестра");
-        return;
-      }
-
-      db.collection("course_groups")
-        .where("courseId", "==", courseId)
-        .where("groupId", "==", groupId)
-        .get()
-        .then(snap => {
-          if (!snap.empty) {
-            alert("Эта группа уже назначена данному курсу");
-            return;
-          }
-
-          db.collection("course_groups").add({
-            courseId: courseId,
-            groupId: groupId,
-            semester: parseInt(semester),
-            assignedAt: firebase.firestore.FieldValue.serverTimestamp()
-          }).then(() => {
-            document.getElementById("semesterInput").value = "";
-          }).catch(error => {
-            alert("Ошибка назначения группы: " + error.message);
-          });
-        });
-    }
-
-    // Удаление группы из курса
-    function removeGroupFromCourse(courseGroupId) {
-      if (confirm("Вы уверены, что хотите удалить группу из этого курса?")) {
-        db.collection("course_groups").doc(courseGroupId).delete()
-          .catch(error => {
-            alert("Ошибка удаления группы: " + error.message);
-          });
-      }
-    }
-
-    // Удаление теста из курса
-    function removeTestFromCourse(testCourseId) {
-      if (confirm("Вы уверены, что хотите удалить тест из этого курса?")) {
-        db.collection("test_course").doc(testCourseId).delete()
-          .catch(error => {
-            alert("Ошибка удаления теста: " + error.message);
-          });
-      }
-    }
-
-    // Удаление лекции из курса
-    function removeLectureFromCourse(lectureCourseId) {
-      if (confirm("Вы уверены, что хотите удалить лекцию из этого курса?")) {
-        db.collection("lecture_course").doc(lectureCourseId).delete()
-          .catch(error => {
-            alert("Ошибка удаления лекции: " + error.message);
-          });
-      }
-    }
-
-    // Инициализация загрузки данных
-    loadAssignedGroups();
-    loadAssignedTests();
-    loadAssignedLectures();
-  </script>
+  <script src="./js/course-details.js"></script>
 </body>
 </html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learn Remote - Успеваемость студента</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <nav class="navbar navbar-expand-md navbar-light bg-light fixed-top">
+    <a class="navbar-brand font-weight-bold" href="./courses.html">Learn Remote</a>
+    <div class="navbar-nav mr-auto">
+      <a class="nav-link" href="./courses.html">Курсы</a>
+      <a class="nav-link" href="./groups.html">Группы</a>
+      <a class="nav-link" href="./notifications.html">Уведомления</a>
+      <a class="nav-link" href="./material.html">Материалы</a>
+      <a class="nav-link active" href="./debtors.html">Должники</a>
+      <a class="nav-link" href="./admin.html">Админ</a>
+    </div>
+    <div class="navbar-text mr-3">
+      <strong id="teacherName"></strong>
+    </div>
+    <a class="nav-link text-danger font-weight-bold" href="#" onclick="logout()">Exit</a>
+  </nav>
+
+  <div class="container">
+    <div class="back-btn">
+      <button class="btn btn-secondary" onclick="history.back()">← Назад</button>
+    </div>
+
+    <div class="student-info-card">
+      <h3 id="studentName"></h3>
+      <p class="mb-0">
+        <span class="badge badge-secondary" id="groupName"></span>
+      </p>
+    </div>
+
+    <h4 class="mb-3">Успеваемость по курсам</h4>
+
+    <div id="coursesContainer">
+      <div class="text-center">
+        <div class="spinner-border text-primary" role="status">
+          <span class="sr-only">Загрузка...</span>
+        </div>
+        <p class="mt-2">Загрузка данных...</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="./js/student-debts.js"></script>
+</body>
+</html>

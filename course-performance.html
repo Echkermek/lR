@@ -5,29 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Learn Remote - Успеваемость</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="./css/style.css">
   <style>
-    body { padding-top: 80px; background-color: #f8f9fa; }
-    .table th { background-color: #f8f9fa; text-align: center; vertical-align: middle; }
-    .table td { text-align: center; vertical-align: middle; }
-    .table-responsive { margin-bottom: 20px; }
-    .back-btn { margin-bottom: 20px; }
-    .course-title { margin-bottom: 20px; text-align: center; }
-    .test-header { background-color: #e9ecef !important; }
-    .student-name { text-align: left; font-weight: bold; }
-    .test-part { font-size: 0.85em; color: #666; }
-    .deadline-row { font-size: 0.9em; }
-    
-    /* Цвета для оценок */
-    .bg-excellent { background-color: #ccffcd; }
-    .bg-good { background-color: #f4ffeb; }
-    .bg-satisfactory { background-color: #f8f593e1; }
-    .bg-unsatisfactory { background-color: #f5c3c7; }
-    .bg-not-taken { background-color: #ffffff; }
-    
-    .fixed {
+    .debug-info {
+      background: #f0f0f0;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow: auto;
+    }
+    .data-status {
       position: fixed;
-      z-index: 99;
-      top: 0;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 12px;
+      z-index: 1000;
+      max-width: 300px;
     }
   </style>
 </head>
@@ -35,1168 +35,335 @@
   <nav class="navbar navbar-expand-md navbar-light bg-light fixed-top">
     <a class="navbar-brand font-weight-bold" href="./courses.html">Learn Remote</a>
     <div class="navbar-nav mr-auto">
-      <a class="nav-link" href="./courses.html">Курсы</a>
+      <a class="nav-link active" href="./courses.html">Курсы</a>
       <a class="nav-link" href="./groups.html">Группы</a>
       <a class="nav-link" href="./notifications.html">Уведомления</a>
       <a class="nav-link" href="./material.html">Материалы</a>
-      <a class="nav-link active" href="./admin.html">Админ</a>
+      <a class="nav-link" href="./debtors.html">Должники</a>
+      <a class="nav-link" href="./manual-answers.html">Проверка ответов</a>
+      <a class="nav-link" href="./admin.html">Админ</a>
     </div>
     <div class="navbar-text mr-3">
       <strong id="teacherName"></strong>
     </div>
-    <a class="nav-link text-danger font-weight-bold" href="#" onclick="logout()">Exit</a>
+    <a class="nav-link text-danger font-weight-bold" href="#" onclick="logout()">Выход</a>
   </nav>
 
   <div class="container">
     <div class="back-btn">
-      <button class="btn btn-secondary" onclick="goBack()">← Назад к курсам</button>
+      <button class="btn btn-secondary" onclick="goBack()">← Назад к курсам группы</button>
     </div>
     
-    <figure class="text-center course-title">
-      <h1 id="groupNameTitle"></h1>
-      <h4 id="courseNameTitle"></h4>
-    </figure>
-    
-    <div class="table-responsive">
-      <table class="table table-bordered" style="table-layout: fixed">
-        <thead id="performanceTableHeader">
-          <!-- Заголовок будет формироваться динамически -->
-        </thead>
-        <tbody id="performanceTableBody">
-        </tbody>
-      </table>
+    <div class="text-center course-title">
+      <h1 id="groupNameTitle">Загрузка...</h1>
+      <h4 id="courseNameTitle">Загрузка...</h4>
     </div>
 
-    <!-- Аккордеон для дополнительных функций -->
-    <div class="container">
-      <div id="accordion">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="mb-0">
-              <button class="btn btn-link" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                Добавить/изменить срок сдачи теста
-              </button>
-            </h5>
-          </div>
-          <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordion">
-            <div class="card-body">
-              <form id="deadlineForm" class="form-inline">
-                <select name="test_id" class="browser-default custom-select" aria-label="Default select example" required id="testSelect">
-                  <!-- Тесты будут добавлены динамически -->
-                </select>
-                <input type="date" class="form-control ml-2" name="date" placeholder="Срок сдачи теста" required id="deadlineDate">
-                <button type="submit" class="btn btn-info ml-2">Сохранить</button>
-              </form>
-            </div>
-          </div>
-        </div>
-        
-        <div class="card">
-          <div class="card-header">
-            <h5 class="mb-0">
-              <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                Перевод студента в другую группу
-              </button>
-            </h5>
-          </div>
-          <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
-            <div class="card-body">
-              <form id="transferForm" class="form-inline">
-                <select name="student_id" class="browser-default custom-select" aria-label="Default select example" required id="studentSelect">
-                  <!-- Студенты будут добавлены динамически -->
-                </select>
-                <select name="new_group_id" class="browser-default custom-select ml-2" aria-label="Default select example" required id="groupSelect">
-                  <!-- Группы будут добавлены динамически -->
-                </select>
-                <button type="submit" class="btn btn-info ml-2">Перевести</button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyD2QJQcuUI9lCJP_kqp5tW24J8TN6phPWw",
-      authDomain: "prob1-5c047.firebaseapp.com",
-      projectId: "prob1-5c047",
-      storageBucket: "prob1-5c047.appspot.com",
-      messagingSenderId: "1083579621866",
-      appId: "1:1083579621866:web:73f214d8fd992f0d52d293"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    if (!localStorage.getItem('teacherId')) {
-      window.location.href = './login.html';
-    }
-
-    function logout() {
-      localStorage.removeItem('teacherId');
-      window.location.href = './login.html';
-    }
-
-    function goBack() {
-      window.location.href = './group-courses.html';
-    }
-
-    // Текущие данные
-    let currentGroupId = null;
-    let currentGroupName = null;
-    let currentCourseId = null;
-    let currentCourseName = null;
-    let allTests = [];
-    let allStudents = [];
-    let testPartsMap = new Map(); // Карта для хранения частей тестов
-
-    // Инициализация при загрузке
-    document.addEventListener('DOMContentLoaded', function() {
-      currentGroupId = localStorage.getItem('currentGroupId');
-      currentGroupName = localStorage.getItem('currentGroupName');
-      currentCourseId = localStorage.getItem('currentCourseId');
-      currentCourseName = localStorage.getItem('currentCourseName');
-      
-      if (!currentGroupId || !currentCourseId) {
-        window.location.href = './groups.html';
-        return;
-      }
-      
-      document.getElementById('groupNameTitle').textContent = currentGroupName;
-      document.getElementById('courseNameTitle').textContent = currentCourseName;
-      
-      loadPerformanceData();
-    });
-
-    // Загрузка данных для таблицы успеваемости
-    async function loadPerformanceData() {
-      const performanceTableBody = document.getElementById('performanceTableBody');
-      performanceTableBody.innerHTML = '<tr><td colspan="100" class="text-center">Загрузка...</td></tr>';
-      
-      try {
-        // Получаем студентов группы
-        const groupSnapshot = await db.collection("usersgroup")
-          .where("groupId", "==", currentGroupId)
-          .get();
-        
-        if (groupSnapshot.empty) {
-          performanceTableBody.innerHTML = '<tr><td colspan="100" class="text-center text-muted">В группе нет студентов</td></tr>';
-          return;
-        }
-        
-        const studentIds = [];
-        groupSnapshot.forEach(doc => {
-          studentIds.push(doc.data().userId);
-        });
-        
-        // Получаем информацию о студентах
-        const studentsPromises = studentIds.map(userId => 
-          db.collection("users").doc(userId).get()
-        );
-        
-        const studentDocs = await Promise.all(studentsPromises);
-        allStudents = [];
-        const studentsMap = new Map();
-        
-        studentDocs.forEach(doc => {
-          if (doc.exists) {
-            const userData = doc.data();
-            const student = {
-              id: doc.id,
-              name: userData.userName || userData.name || 'Неизвестный студент',
-              surname: userData.surname || ''
-            };
-            allStudents.push(student);
-            studentsMap.set(doc.id, student);
-          }
-        });
-        
-        // Получаем тесты курса
-        const testCourseSnapshot = await db.collection("test_course")
-          .where("courseId", "==", currentCourseId)
-          .get();
-        
-        if (testCourseSnapshot.empty) {
-          performanceTableBody.innerHTML = '<tr><td colspan="100" class="text-center text-muted">Нет тестов для этого курса</td></tr>';
-          return;
-        }
-        
-        allTests = [];
-        const testPromises = [];
-        
-        testCourseSnapshot.forEach(doc => {
-          const data = doc.data();
-          const testId = data.testId;
-          
-          testPromises.push(
-            db.collection("tests").doc(testId).get().then(testDoc => {
-              if (testDoc.exists) {
-                const testData = testDoc.data();
-                return {
-                  id: testId,
-                  name: testData.title || 'Без названия',
-                  deadline: data.assignedAt || 'нет'
-                };
-              }
-              return null;
-            })
-          );
-        });
-        
-        const tests = await Promise.all(testPromises);
-        allTests = tests.filter(test => test !== null);
-        
-        // Получаем части тестов из подколлекции parts
-        await loadTestParts();
-        
-        // Получаем дедлайны для группы
-        const deadlinesMap = await loadDeadlines();
-        
-        // Получаем результаты тестов
-        const gradesMap = await loadTestGrades(studentIds);
-        
-        // Строим таблицу
-        buildPerformanceTable(allStudents, allTests, gradesMap, deadlinesMap);
-        
-        // Заполняем формы
-        populateForms();
-        
-      } catch (error) {
-        console.error("Ошибка загрузки данных:", error);
-        performanceTableBody.innerHTML = '<tr><td colspan="100" class="text-center text-danger">Ошибка загрузки данных</td></tr>';
-      }
-    }
-
-    // Загрузка частей тестов из подколлекции parts
-    async function loadTestParts() {
-      testPartsMap.clear();
-      
-      for (const test of allTests) {
-        const partsSnapshot = await db.collection("tests").doc(test.id).collection("parts").get();
-        
-        const parts = [];
-        partsSnapshot.forEach(doc => {
-          const partData = doc.data();
-          parts.push({
-            id: doc.id,
-            name: partData.title || 'Часть теста',
-            order: partData.order || 0
-          });
-        });
-        
-        // Сортируем части по порядку
-        parts.sort((a, b) => a.order - b.order);
-        testPartsMap.set(test.id, parts);
-      }
-    }
-
-    // Загрузка дедлайнов
-    async function loadDeadlines() {
-      const deadlinesMap = new Map();
-      
-      const deadlinesSnapshot = await db.collection("deadlines")
-        .where("groupId", "==", currentGroupId)
-        .get();
-      
-      deadlinesSnapshot.forEach(doc => {
-        const deadlineData = doc.data();
-        // Преобразуем Timestamp в Date для отображения
-        if (deadlineData.deadline && deadlineData.deadline.toDate) {
-          deadlinesMap.set(deadlineData.testId, deadlineData.deadline.toDate());
-        } else {
-          deadlinesMap.set(deadlineData.testId, deadlineData.deadline);
-        }
-      });
-      
-      return deadlinesMap;
-    }
-
-    // Загрузка результатов тестов
-    async function loadTestGrades(studentIds) {
-      const gradesMap = new Map();
-      
-      const gradesPromises = allTests.map(test => 
-        db.collection("test_grades")
-          .where("testId", "==", test.id)
-          .where("userId", "in", studentIds)
-          .get()
-      );
-      
-      const allGrades = await Promise.all(gradesPromises);
-      
-      allGrades.forEach((gradesSnapshot, testIndex) => {
-        const testId = allTests[testIndex].id;
-        gradesSnapshot.forEach(gradeDoc => {
-          const gradeData = gradeDoc.data();
-          const key = `${gradeData.userId}_${testId}`;
-          gradesMap.set(key, {
-            score: gradeData.bestScore || 0,
-            date: gradeData.timestamp ? (gradeData.timestamp.toDate ? gradeData.timestamp.toDate() : new Date(gradeData.timestamp)) : null
-          });
-        });
-      });
-      
-      return gradesMap;
-    }
-
-    // Построение таблицы успеваемости
-    function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
-      const performanceTableHeader = document.getElementById('performanceTableHeader');
-      const performanceTableBody = document.getElementById('performanceTableBody');
-      
-      // Очищаем заголовок
-      performanceTableHeader.innerHTML = '';
-      
-      // Строим заголовок таблицы
-      let headerHTML = `
-        <tr>
-          <th rowspan="3" style="width: 200px;">Студент</th>
-      `;
-      
-      // Заголовки тестов (объединяющие ячейки)
-      tests.forEach(test => {
-        const parts = testPartsMap.get(test.id) || [];
-        const colSpan = parts.length > 0 ? parts.length : 1;
-        headerHTML += `<th colspan="${colSpan}">${test.name}</th>`;
-      });
-      
-      headerHTML += `<th rowspan="3" style="width: 100px;">Оценка</th></tr>`;
-      
-      // Строка с дедлайнами
-      headerHTML += `<tr class="deadline-row">`;
-      
-      tests.forEach(test => {
-        const parts = testPartsMap.get(test.id) || [];
-        const deadline = deadlinesMap.get(test.id);
-        const colSpan = parts.length > 0 ? parts.length : 1;
-        
-        headerHTML += `<th colspan="${colSpan}">${formatDate(deadline) || 'Нет срока'}</th>`;
-      });
-      
-      headerHTML += `</tr>`;
-      
-      // Строка с названиями частей тестов
-      headerHTML += `<tr>`;
-      
-      tests.forEach(test => {
-        const parts = testPartsMap.get(test.id) || [];
-        
-        if (parts.length > 0) {
-          parts.forEach(part => {
-            headerHTML += `<th class="test-part">${part.name}</th>`;
-          });
-        } else {
-          headerHTML += `<th class="test-part">Тест</th>`;
-        }
-      });
-      
-      headerHTML += `</tr>`;
-      
-      performanceTableHeader.innerHTML = headerHTML;
-      
-      // Заполняем тело таблицы
-      let tableHTML = '';
-      
-      students.forEach(student => {
-        let studentRow = `<tr>
-          <td class="student-name">${student.name} ${student.surname}</td>`;
-        
-        let totalScore = 0;
-        let testsTaken = 0;
-        
-        // Ячейки с результатами тестов
-        tests.forEach(test => {
-          const parts = testPartsMap.get(test.id) || [];
-          const key = `${student.id}_${test.id}`;
-          const grade = gradesMap.get(key);
-          
-          if (parts.length > 0) {
-            // Если тест разделен на части
-            parts.forEach(part => {
-              if (grade) {
-                const score = grade.score;
-                totalScore += score;
-                testsTaken++;
-                
-                studentRow += `<td data-toggle="popover" title="Результат теста" data-html="true" 
-                  data-content="Тест: ${test.name}<br>Часть: ${part.name}<br>Баллы: ${score}<br>Дата: ${grade.date ? formatDate(grade.date.toISOString()) : 'Неизвестно'}">${score}</td>`;
-              } else {
-                studentRow += `<td data-toggle="popover" title="Результат теста" 
-                  data-content="Тест: ${test.name}<br>Часть: ${part.name}<br>Статус: Не сдавал">-</td>`;
-              }
-            });
-          } else {
-            // Если тест не разделен на части
-            if (grade) {
-              const score = grade.score;
-              totalScore += score;
-              testsTaken++;
-              
-              studentRow += `<td data-toggle="popover" title="Результат теста" data-html="true" 
-                data-content="Тест: ${test.name}<br>Баллы: ${score}<br>Дата: ${grade.date ? formatDate(grade.date.toISOString()) : 'Неизвестно'}">${score}</td>`;
-            } else {
-              studentRow += `<td data-toggle="popover" title="Результат теста" 
-                data-content="Тест: ${test.name}<br>Статус: Не сдавал">-</td>`;
-            }
-          }
-        });
-        
-        // Итоговая оценка
-        const average = tests.length > 0 ? totalScore / tests.length : 0;
-        let finalGrade = '';
-        let finalGradeClass = '';
-        
-        if (average >= 85) {
-          finalGrade = 'отл';
-          finalGradeClass = 'bg-excellent';
-        } else if (average >= 70) {
-          finalGrade = 'хор';
-          finalGradeClass = 'bg-good';
-        } else if (average >= 60) {
-          finalGrade = 'удовл';
-          finalGradeClass = 'bg-satisfactory';
-        } else {
-          finalGrade = 'неуд';
-          finalGradeClass = 'bg-unsatisfactory';
-        }
-        
-        studentRow += `<td class="${finalGradeClass}" data-toggle="popover" title="Итоговый результат" 
-          data-content="Средний балл: ${average.toFixed(1)}<br>Сдано тестов: ${testsTaken} из ${tests.length}">${finalGrade}</td>`;
-        
-        studentRow += '</tr>';
-        tableHTML += studentRow;
-      });
-      
-      performanceTableBody.innerHTML = tableHTML;
-      
-      // Инициализируем popover
-      $(document).ready(function(){
-        $('[data-toggle="popover"]').popover();
-      });
-    }
-
-    // Заполнение форм в аккордеоне
-    function populateForms() {
-      // Заполняем выбор теста
-      const testSelect = document.getElementById('testSelect');
-      testSelect.innerHTML = '';
-      allTests.forEach(test => {
-        const option = document.createElement('option');
-        option.value = test.id;
-        option.textContent = test.name;
-        testSelect.appendChild(option);
-      });
-      
-      // Заполняем выбор студента
-      const studentSelect = document.getElementById('studentSelect');
-      studentSelect.innerHTML = '';
-      allStudents.forEach(student => {
-        const option = document.createElement('option');
-        option.value = student.id;
-        option.textContent = `${student.name} ${student.surname}`;
-        studentSelect.appendChild(option);
-      });
-      
-      // Заполняем выбор группы (нужно загрузить все группы)
-      db.collection("groups").get().then(snapshot => {
-        const groupSelect = document.getElementById('groupSelect');
-        groupSelect.innerHTML = '';
-        snapshot.forEach(doc => {
-          if (doc.id !== currentGroupId) {
-            const groupData = doc.data();
-            const option = document.createElement('option');
-            option.value = doc.id;
-            option.textContent = groupData.name;
-            groupSelect.appendChild(option);
-          }
-        });
-      });
-    }
-
-    // Вспомогательная функция для форматирования даты
-    function formatDate(dateValue) {
-      if (!dateValue || dateValue === 'нет') return 'нет';
-      
-      try {
-        let date;
-        
-        // Если это Firestore Timestamp
-        if (dateValue.toDate && typeof dateValue.toDate === 'function') {
-          date = dateValue.toDate();
-        }
-        // Если это объект Date
-        else if (dateValue instanceof Date) {
-          date = dateValue;
-        }
-        // Если это timestamp в миллисекундах
-        else if (typeof dateValue === 'number') {
-          date = new Date(dateValue);
-        }
-        // Если это строка даты
-        else {
-          date = new Date(dateValue);
-        }
-        
-        // Проверяем, что дата валидна
-        if (isNaN(date.getTime())) {
-          return 'Invalid Date';
-        }
-        
-        return date.toLocaleDateString('ru-RU');
-      } catch (e) {
-        console.error('Ошибка форматирования даты:', e, dateValue);
-        return 'Invalid Date';
-      }
-    }
-
-    // Обработчики форм
-    document.getElementById('deadlineForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      
-      const formData = new FormData(this);
-      const testId = formData.get('test_id');
-      const dateString = formData.get('date');
-      
-      if (!testId || !dateString) {
-        alert('Пожалуйста, выберите тест и укажите дату');
-        return;
-      }
-      
-      try {
-        // Создаем объект Date из строки даты
-        const date = new Date(dateString + 'T00:00:00'); // Добавляем время, чтобы избежать проблем с часовыми поясами
-        
-        // Проверяем, существует ли уже дедлайн для этого теста и группы
-        const existingDeadline = await db.collection("deadlines")
-          .where("testId", "==", testId)
-          .where("groupId", "==", currentGroupId)
-          .get();
-        
-        const deadlineData = {
-          testId: testId,
-          groupId: currentGroupId,
-          deadline: firebase.firestore.Timestamp.fromDate(date),
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        
-        if (!existingDeadline.empty) {
-          // Обновляем существующий дедлайн
-          const docId = existingDeadline.docs[0].id;
-          await db.collection("deadlines").doc(docId).update(deadlineData);
-          alert('Срок сдачи успешно обновлен!');
-        } else {
-          // Создаем новый дедлайн
-          await db.collection("deadlines").add(deadlineData);
-          alert('Срок сдачи успешно добавлен!');
-        }
-        
-        // Перезагружаем данные таблицы
-        loadPerformanceData();
-        
-        // Очищаем форму
-        this.reset();
-        
-      } catch (error) {
-        console.error('Ошибка при сохранении дедлайна:', error);
-        alert('Произошла ошибка при сохранении срока сдачи');
-      }
-    });
-    
-    document.getElementById('transferForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      alert('Функция перевода студента будет реализована');
-    });
-  </script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Learn Remote - Успеваемость</title>
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
-  <style>
-    body { padding-top: 80px; background-color: #f8f9fa; }
-    .table th { background-color: #f8f9fa; text-align: center; vertical-align: middle; }
-    .table td { text-align: center; vertical-align: middle; }
-    .table-responsive { margin-bottom: 20px; }
-    .back-btn { margin-bottom: 20px; }
-    .course-title { margin-bottom: 20px; text-align: center; }
-    .test-header { background-color: #e9ecef !important; }
-    .student-name { text-align: left; font-weight: bold; }
-    .test-part { font-size: 0.85em; color: #666; }
-    .deadline-row { font-size: 0.9em; }
-    
-    /* Цвета для оценок */
-    .bg-excellent { background-color: #ccffcd; }
-    .bg-good { background-color: #f4ffeb; }
-    .bg-satisfactory { background-color: #f8f593e1; }
-    .bg-unsatisfactory { background-color: #f5c3c7; }
-    .bg-not-taken { background-color: #ffffff; }
-    
-    .fixed {
-      position: fixed;
-      z-index: 99;
-      top: 0;
-    }
-  </style>
-</head>
-<body>
-  <nav class="navbar navbar-expand-md navbar-light bg-light fixed-top">
-    <a class="navbar-brand font-weight-bold" href="./courses.html">Learn Remote</a>
-    <div class="navbar-nav mr-auto">
-      <a class="nav-link" href="./courses.html">Курсы</a>
-      <a class="nav-link" href="./groups.html">Группы</a>
-      <a class="nav-link" href="./notifications.html">Уведомления</a>
-      <a class="nav-link" href="./material.html">Материалы</a>
-      <a class="nav-link active" href="./admin.html">Админ</a>
-    </div>
-    <div class="navbar-text mr-3">
-      <strong id="teacherName"></strong>
-    </div>
-    <a class="nav-link text-danger font-weight-bold" href="#" onclick="logout()">Exit</a>
-  </nav>
-
-  <div class="container">
-    <div class="back-btn">
-      <button class="btn btn-secondary" onclick="goBack()">← Назад к курсам</button>
-    </div>
-    
-    <figure class="text-center course-title">
-      <h1 id="groupNameTitle"></h1>
-      <h4 id="courseNameTitle"></h4>
-    </figure>
-    
-    <div class="table-responsive">
-      <table class="table table-bordered" style="table-layout: fixed">
-        <thead id="performanceTableHeader">
-          <!-- Заголовок будет формироваться динамически -->
-        </thead>
-        <tbody id="performanceTableBody">
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Аккордеон для дополнительных функций -->
-    <div class="container">
-      <div id="accordion">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="mb-0">
-              <button class="btn btn-link" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                Добавить/изменить срок сдачи теста
-              </button>
-            </h5>
-          </div>
-          <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordion">
-            <div class="card-body">
-              <form id="deadlineForm" class="form-inline">
-                <select name="test_id" class="browser-default custom-select" aria-label="Default select example" required id="testSelect">
-                  <!-- Тесты будут добавлены динамически -->
-                </select>
-                <input type="date" class="form-control ml-2" name="date" placeholder="Срок сдачи теста" required id="deadlineDate">
-                <button type="submit" class="btn btn-info ml-2">Сохранить</button>
-              </form>
-            </div>
-          </div>
-        </div>
-        
-        <div class="card">
-          <div class="card-header">
-            <h5 class="mb-0">
-              <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                Перевод студента в другую группу
-              </button>
-            </h5>
-          </div>
-          <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
-            <div class="card-body">
-              <form id="transferForm" class="form-inline">
-                <select name="student_id" class="browser-default custom-select" aria-label="Default select example" required id="studentSelect">
-                  <!-- Студенты будут добавлены динамически -->
-                </select>
-                <select name="new_group_id" class="browser-default custom-select ml-2" aria-label="Default select example" required id="groupSelect">
-                  <!-- Группы будут добавлены динамически -->
-                </select>
-                <button type="submit" class="btn btn-info ml-2">Перевести</button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script>
    
+    
+    
+    <div class="table-responsive">
+      <table class="table table-bordered" id="performanceTable">
+        <thead id="performanceTableHeader"></thead>
+        <tbody id="performanceTableBody">
+          <tr><td colspan="100" class="text-center">
+            <div class="spinner-border text-primary" role="status">
+              <span class="sr-only">Загрузка...</span>
+            </div>
+            <p class="mt-2">Загрузка данных успеваемости...</p>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
 
-    // Инициализация при загрузке
-    document.addEventListener('DOMContentLoaded', function() {
-      currentGroupId = localStorage.getItem('currentGroupId');
-      currentGroupName = localStorage.getItem('currentGroupName');
-      currentCourseId = localStorage.getItem('currentCourseId');
-      currentCourseName = localStorage.getItem('currentCourseName');
-      
-      if (!currentGroupId || !currentCourseId) {
-        window.location.href = './groups.html';
-        return;
+    <div class="container mt-4">
+      <div id="accordion">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <button class="btn btn-link" data-toggle="collapse" data-target="#collapseOne">
+                Добавить/изменить срок сдачи теста
+              </button>
+            </h5>
+          </div>
+          <div id="collapseOne" class="collapse show">
+            <div class="card-body">
+              <form id="deadlineForm" class="form-inline">
+                <select id="testSelect" class="browser-default custom-select" required style="min-width: 300px;">
+                  <option value="">Выберите тест</option>
+                </select>
+                <input type="date" class="form-control ml-2" id="deadlineDate" required style="min-width: 200px;">
+                <button type="submit" class="btn btn-info ml-2">Сохранить</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#collapseTwo">
+                Перевод студента в другую группу
+              </button>
+            </h5>
+          </div>
+          <div id="collapseTwo" class="collapse">
+            <div class="card-body">
+              <form id="transferForm" class="form-inline">
+                <select id="studentSelect" class="browser-default custom-select" required style="min-width: 250px;">
+                  <option value="">Выберите студента</option>
+                </select>
+                <select id="groupSelect" class="browser-default custom-select ml-2" required style="min-width: 250px;">
+                  <option value="">Выберите группу</option>
+                </select>
+                <button type="submit" class="btn btn-info ml-2">Перевести</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="resetAttemptModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">Сброс попытки</h5>
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>Вы уверены, что хотите сбросить попытку?</p>
+          <p><strong>Студент:</strong> <span id="resetStudentName"></span></p>
+          <p><strong>Тест:</strong> <span id="resetTestName"></span></p>
+          <p><strong>Часть:</strong> <span id="resetPartName"></span></p>
+          <p><strong>Текущий балл:</strong> <span id="resetCurrentScore"></span></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Отмена</button>
+          <button type="button" class="btn btn-primary" onclick="confirmResetAttempt()" id="confirmResetBtn">
+            Сбросить попытку
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="data-status" id="dataStatus" style="display: none;">
+    <div id="statusMessage"></div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="./js/scripts.js"></script>
+  <script>
+    function goBack() { 
+      window.location.href = './group-courses.html'; 
+    }
+
+    function updateDebugInfo(data) {
+      const debugEl = document.getElementById('debugContent');
+      if (debugEl) {
+        debugEl.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
       }
-      
-      document.getElementById('groupNameTitle').textContent = currentGroupName;
-      document.getElementById('courseNameTitle').textContent = currentCourseName;
-      
-      loadPerformanceData();
-    });
+    }
 
-    // Загрузка данных для таблицы успеваемости
+    function showStatus(message, isError = false) {
+      const statusEl = document.getElementById('dataStatus');
+      const messageEl = document.getElementById('statusMessage');
+      if (statusEl && messageEl) {
+        messageEl.textContent = message;
+        statusEl.style.display = 'block';
+        statusEl.style.backgroundColor = isError ? 'rgba(220, 53, 69, 0.9)' : 'rgba(40, 167, 69, 0.9)';
+        setTimeout(() => {
+          statusEl.style.display = 'none';
+        }, 5000);
+      }
+    }
+
     async function loadPerformanceData() {
-      const performanceTableBody = document.getElementById('performanceTableBody');
-      performanceTableBody.innerHTML = '<tr><td colspan="100" class="text-center">Загрузка...</td></tr>';
+      console.log('=== НАЧАЛО ЗАГРУЗКИ ДАННЫХ УСПЕВАЕМОСТИ ===');
+      
+      const tbody = document.getElementById('performanceTableBody');
+      if (!tbody) return;
+      
+      tbody.innerHTML = '<tr><td colspan="100" class="text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Загрузка данных...</p></td></tr>';
       
       try {
-        // Получаем студентов группы
+        const groupId = localStorage.getItem('currentGroupId');
+        const courseId = localStorage.getItem('currentCourseId');
+        
+        console.log('ID группы:', groupId);
+        console.log('ID курса:', courseId);
+        
+        if (!groupId || !courseId) {
+          throw new Error('Не найдены ID группы или курса в localStorage');
+        }
+
+        console.log('Запрос студентов группы...');
         const groupSnapshot = await db.collection("usersgroup")
-          .where("groupId", "==", currentGroupId)
+          .where("groupId", "==", groupId)
           .get();
         
-        if (groupSnapshot.empty) {
-          performanceTableBody.innerHTML = '<tr><td colspan="100" class="text-center text-muted">В группе нет студентов</td></tr>';
-          return;
+        console.log('Найдено записей в usersgroup:', groupSnapshot.size);
+        
+        if (groupSnapshot.empty) { 
+          tbody.innerHTML = '<tr><td colspan="100" class="text-center text-muted">В группе нет студентов</td></tr>'; 
+          showStatus('В группе нет студентов', true);
+          return; 
         }
         
         const studentIds = [];
         groupSnapshot.forEach(doc => {
-          studentIds.push(doc.data().userId);
+          const data = doc.data();
+          console.log('Данные student:', data);
+          studentIds.push(data.userId);
         });
         
-        // Получаем информацию о студентах
-        const studentsPromises = studentIds.map(userId => 
-          db.collection("users").doc(userId).get()
+        console.log('ID студентов:', studentIds);
+        
+        console.log('Запрос данных студентов...');
+        const studentDocs = await Promise.all(
+          studentIds.map(userId => db.collection("users").doc(userId).get())
         );
         
-        const studentDocs = await Promise.all(studentsPromises);
         allStudents = [];
-        const studentsMap = new Map();
-        
-        studentDocs.forEach(doc => {
+        studentDocs.forEach((doc, index) => {
           if (doc.exists) {
             const userData = doc.data();
-            const student = {
-              id: doc.id,
-              name: userData.userName || userData.name || 'Неизвестный студент',
-              surname: userData.surname || ''
-            };
-            allStudents.push(student);
-            studentsMap.set(doc.id, student);
+            console.log('Данные пользователя:', doc.id, userData);
+            allStudents.push({ 
+              id: doc.id, 
+              name: userData.name || 'Неизвестный', 
+              surname: userData.surname || '' 
+            });
+          } else {
+            console.warn('Документ пользователя не найден:', studentIds[index]);
           }
         });
         
-        // Получаем тесты курса
+        console.log('Обработано студентов:', allStudents.length);
+        
+        console.log('Запрос тестов курса...');
         const testCourseSnapshot = await db.collection("test_course")
-          .where("courseId", "==", currentCourseId)
+          .where("courseId", "==", courseId)
           .get();
         
-        if (testCourseSnapshot.empty) {
-          performanceTableBody.innerHTML = '<tr><td colspan="100" class="text-center text-muted">Нет тестов для этого курса</td></tr>';
-          return;
+        console.log('Найдено записей test_course:', testCourseSnapshot.size);
+        
+        if (testCourseSnapshot.empty) { 
+          tbody.innerHTML = '<tr><td colspan="100" class="text-center text-muted">Нет тестов для этого курса</td></tr>'; 
+          showStatus('Нет тестов для этого курса', true);
+          return; 
         }
         
         allTests = [];
-        const testPromises = [];
-        
-        testCourseSnapshot.forEach(doc => {
+        for (const doc of testCourseSnapshot.docs) {
           const data = doc.data();
-          const testId = data.testId;
+          console.log('Данные test_course:', data);
           
-          testPromises.push(
-            db.collection("tests").doc(testId).get().then(testDoc => {
-              if (testDoc.exists) {
-                const testData = testDoc.data();
-                return {
-                  id: testId,
-                  name: testData.title || 'Без названия',
-                  deadline: data.assignedAt || 'нет'
-                };
-              }
-              return null;
-            })
-          );
-        });
-        
-        const tests = await Promise.all(testPromises);
-        allTests = tests.filter(test => test !== null);
-        
-        // Получаем части тестов из подколлекции parts
-        await loadTestParts();
-        
-        // Получаем дедлайны для группы
-        const deadlinesMap = await loadDeadlines();
-        
-        // Получаем результаты тестов
-        const gradesMap = await loadTestGrades(studentIds);
-        
-        // Строим таблицу
-        buildPerformanceTable(allStudents, allTests, gradesMap, deadlinesMap);
-        
-        // Заполняем формы
-        populateForms();
-        
-      } catch (error) {
-        console.error("Ошибка загрузки данных:", error);
-        performanceTableBody.innerHTML = '<tr><td colspan="100" class="text-center text-danger">Ошибка загрузки данных</td></tr>';
-      }
-    }
-
-    // Загрузка частей тестов из подколлекции parts
-    async function loadTestParts() {
-      testPartsMap.clear();
-      
-      for (const test of allTests) {
-        const partsSnapshot = await db.collection("tests").doc(test.id).collection("parts").get();
-        
-        const parts = [];
-        partsSnapshot.forEach(doc => {
-          const partData = doc.data();
-          parts.push({
-            id: doc.id,
-            name: partData.title || 'Часть теста',
-            order: partData.order || 0
-          });
-        });
-        
-        // Сортируем части по порядку
-        parts.sort((a, b) => a.order - b.order);
-        testPartsMap.set(test.id, parts);
-      }
-    }
-
-    // Загрузка дедлайнов
-    async function loadDeadlines() {
-      const deadlinesMap = new Map();
-      
-      const deadlinesSnapshot = await db.collection("deadlines")
-        .where("groupId", "==", currentGroupId)
-        .get();
-      
-      deadlinesSnapshot.forEach(doc => {
-        const deadlineData = doc.data();
-        // Преобразуем Timestamp в Date для отображения
-        if (deadlineData.deadline && deadlineData.deadline.toDate) {
-          deadlinesMap.set(deadlineData.testId, deadlineData.deadline.toDate());
-        } else {
-          deadlinesMap.set(deadlineData.testId, deadlineData.deadline);
-        }
-      });
-      
-      return deadlinesMap;
-    }
-
-    // Загрузка результатов тестов
-    async function loadTestGrades(studentIds) {
-      const gradesMap = new Map();
-      
-      const gradesPromises = allTests.map(test => 
-        db.collection("test_grades")
-          .where("testId", "==", test.id)
-          .where("userId", "in", studentIds)
-          .get()
-      );
-      
-      const allGrades = await Promise.all(gradesPromises);
-      
-      allGrades.forEach((gradesSnapshot, testIndex) => {
-        const testId = allTests[testIndex].id;
-        gradesSnapshot.forEach(gradeDoc => {
-          const gradeData = gradeDoc.data();
-          const key = `${gradeData.userId}_${testId}`;
-          gradesMap.set(key, {
-            score: gradeData.bestScore || 0,
-            date: gradeData.timestamp ? (gradeData.timestamp.toDate ? gradeData.timestamp.toDate() : new Date(gradeData.timestamp)) : null
-          });
-        });
-      });
-      
-      return gradesMap;
-    }
-
-    // Построение таблицы успеваемости
-    function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
-      const performanceTableHeader = document.getElementById('performanceTableHeader');
-      const performanceTableBody = document.getElementById('performanceTableBody');
-      
-      // Очищаем заголовок
-      performanceTableHeader.innerHTML = '';
-      
-      // Строим заголовок таблицы
-      let headerHTML = `
-        <tr>
-          <th rowspan="3" style="width: 200px;">Студент</th>
-      `;
-      
-      // Заголовки тестов (объединяющие ячейки)
-      tests.forEach(test => {
-        const parts = testPartsMap.get(test.id) || [];
-        const colSpan = parts.length > 0 ? parts.length : 1;
-        headerHTML += `<th colspan="${colSpan}">${test.name}</th>`;
-      });
-      
-      headerHTML += `<th rowspan="3" style="width: 100px;">Оценка</th></tr>`;
-      
-      // Строка с дедлайнами
-      headerHTML += `<tr class="deadline-row">`;
-      
-      tests.forEach(test => {
-        const parts = testPartsMap.get(test.id) || [];
-        const deadline = deadlinesMap.get(test.id);
-        const colSpan = parts.length > 0 ? parts.length : 1;
-        
-        headerHTML += `<th colspan="${colSpan}">${formatDate(deadline) || 'Нет срока'}</th>`;
-      });
-      
-      headerHTML += `</tr>`;
-      
-      // Строка с названиями частей тестов
-      headerHTML += `<tr>`;
-      
-      tests.forEach(test => {
-        const parts = testPartsMap.get(test.id) || [];
-        
-        if (parts.length > 0) {
-          parts.forEach(part => {
-            headerHTML += `<th class="test-part">${part.name}</th>`;
-          });
-        } else {
-          headerHTML += `<th class="test-part">Тест</th>`;
-        }
-      });
-      
-      headerHTML += `</tr>`;
-      
-      performanceTableHeader.innerHTML = headerHTML;
-      
-      // Заполняем тело таблицы
-      let tableHTML = '';
-      
-      students.forEach(student => {
-        let studentRow = `<tr>
-          <td class="student-name">${student.name} ${student.surname}</td>`;
-        
-        let totalScore = 0;
-        let testsTaken = 0;
-        
-        // Ячейки с результатами тестов
-        tests.forEach(test => {
-          const parts = testPartsMap.get(test.id) || [];
-          const key = `${student.id}_${test.id}`;
-          const grade = gradesMap.get(key);
-          
-          if (parts.length > 0) {
-            // Если тест разделен на части
-            parts.forEach(part => {
-              if (grade) {
-                const score = grade.score;
-                totalScore += score;
-                testsTaken++;
-                
-                studentRow += `<td data-toggle="popover" title="Результат теста" data-html="true" 
-                  data-content="Тест: ${test.name}<br>Часть: ${part.name}<br>Баллы: ${score}<br>Дата: ${grade.date ? formatDate(grade.date.toISOString()) : 'Неизвестно'}">${score}</td>`;
-              } else {
-                studentRow += `<td data-toggle="popover" title="Результат теста" 
-                  data-content="Тест: ${test.name}<br>Часть: ${part.name}<br>Статус: Не сдавал">-</td>`;
-              }
+          const testDoc = await db.collection("tests").doc(data.testId).get();
+          if (testDoc.exists) {
+            const testData = testDoc.data();
+            console.log('Данные теста:', testDoc.id, testData);
+            allTests.push({ 
+              id: data.testId, 
+              name: testData.title || 'Без названия', 
+              num: testData.num || 0 
             });
           } else {
-            // Если тест не разделен на части
-            if (grade) {
-              const score = grade.score;
-              totalScore += score;
-              testsTaken++;
-              
-              studentRow += `<td data-toggle="popover" title="Результат теста" data-html="true" 
-                data-content="Тест: ${test.name}<br>Баллы: ${score}<br>Дата: ${grade.date ? formatDate(grade.date.toISOString()) : 'Неизвестно'}">${score}</td>`;
-            } else {
-              studentRow += `<td data-toggle="popover" title="Результат теста" 
-                data-content="Тест: ${test.name}<br>Статус: Не сдавал">-</td>`;
-            }
+            console.warn('Тест не найден:', data.testId);
           }
+        }
+        
+        allTests.sort((a, b) => a.num - b.num);
+        console.log('Обработано тестов:', allTests.length);
+        
+    
+        console.log('Загрузка частей тестов...');
+        await loadTestParts();
+        console.log('Карта частей тестов:', Array.from(testPartsMap.entries()));
+        
+        console.log('Загрузка дедлайнов...');
+        const deadlinesMap = await loadDeadlines();
+        console.log('Карта дедлайнов:', Array.from(deadlinesMap.entries()));
+        
+        console.log('Загрузка оценок...');
+        const gradesMap = await loadTestGrades(studentIds);
+        console.log('Карта оценок:', Array.from(gradesMap.entries()));
+        
+        console.log('Построение таблицы...');
+        buildPerformanceTable(allStudents, allTests, gradesMap, deadlinesMap);
+        
+        populateForms();
+        
+        updateDebugInfo({
+          groupId,
+          courseId,
+          students: allStudents,
+          tests: allTests,
+          testParts: Array.from(testPartsMap.entries()),
+          deadlines: Array.from(deadlinesMap.entries()),
+          grades: Array.from(gradesMap.entries())
         });
         
-        // Итоговая оценка
-        const average = tests.length > 0 ? totalScore / tests.length : 0;
-        let finalGrade = '';
-        let finalGradeClass = '';
         
-        if (average >= 85) {
-          finalGrade = 'отл';
-          finalGradeClass = 'bg-excellent';
-        } else if (average >= 70) {
-          finalGrade = 'хор';
-          finalGradeClass = 'bg-good';
-        } else if (average >= 60) {
-          finalGrade = 'удовл';
-          finalGradeClass = 'bg-satisfactory';
-        } else {
-          finalGrade = 'неуд';
-          finalGradeClass = 'bg-unsatisfactory';
-        }
-        
-        studentRow += `<td class="${finalGradeClass}" data-toggle="popover" title="Итоговый результат" 
-          data-content="Средний балл: ${average.toFixed(1)}<br>Сдано тестов: ${testsTaken} из ${tests.length}">${finalGrade}</td>`;
-        
-        studentRow += '</tr>';
-        tableHTML += studentRow;
-      });
-      
-      performanceTableBody.innerHTML = tableHTML;
-      
-      // Инициализируем popover
-      $(document).ready(function(){
-        $('[data-toggle="popover"]').popover();
-      });
-    }
-
-    // Заполнение форм в аккордеоне
-    function populateForms() {
-      // Заполняем выбор теста
-      const testSelect = document.getElementById('testSelect');
-      testSelect.innerHTML = '';
-      allTests.forEach(test => {
-        const option = document.createElement('option');
-        option.value = test.id;
-        option.textContent = test.name;
-        testSelect.appendChild(option);
-      });
-      
-      // Заполняем выбор студента
-      const studentSelect = document.getElementById('studentSelect');
-      studentSelect.innerHTML = '';
-      allStudents.forEach(student => {
-        const option = document.createElement('option');
-        option.value = student.id;
-        option.textContent = `${student.name} ${student.surname}`;
-        studentSelect.appendChild(option);
-      });
-      
-      // Заполняем выбор группы (нужно загрузить все группы)
-      db.collection("groups").get().then(snapshot => {
-        const groupSelect = document.getElementById('groupSelect');
-        groupSelect.innerHTML = '';
-        snapshot.forEach(doc => {
-          if (doc.id !== currentGroupId) {
-            const groupData = doc.data();
-            const option = document.createElement('option');
-            option.value = doc.id;
-            option.textContent = groupData.name;
-            groupSelect.appendChild(option);
-          }
-        });
-      });
-    }
-
-    // Вспомогательная функция для форматирования даты
-    function formatDate(dateValue) {
-      if (!dateValue || dateValue === 'нет') return 'нет';
-      
-      try {
-        let date;
-        
-        // Если это Firestore Timestamp
-        if (dateValue.toDate && typeof dateValue.toDate === 'function') {
-          date = dateValue.toDate();
-        }
-        // Если это объект Date
-        else if (dateValue instanceof Date) {
-          date = dateValue;
-        }
-        // Если это timestamp в миллисекундах
-        else if (typeof dateValue === 'number') {
-          date = new Date(dateValue);
-        }
-        // Если это строка даты
-        else {
-          date = new Date(dateValue);
-        }
-        
-        // Проверяем, что дата валидна
-        if (isNaN(date.getTime())) {
-          return 'Invalid Date';
-        }
-        
-        return date.toLocaleDateString('ru-RU');
-      } catch (e) {
-        console.error('Ошибка форматирования даты:', e, dateValue);
-        return 'Invalid Date';
-      }
-    }
-
-    // Обработчики форм
-    document.getElementById('deadlineForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      
-      const formData = new FormData(this);
-      const testId = formData.get('test_id');
-      const dateString = formData.get('date');
-      
-      if (!testId || !dateString) {
-        alert('Пожалуйста, выберите тест и укажите дату');
-        return;
-      }
-      
-      try {
-        // Создаем объект Date из строки даты
-        const date = new Date(dateString + 'T00:00:00'); // Добавляем время, чтобы избежать проблем с часовыми поясами
-        
-        // Проверяем, существует ли уже дедлайн для этого теста и группы
-        const existingDeadline = await db.collection("deadlines")
-          .where("testId", "==", testId)
-          .where("groupId", "==", currentGroupId)
-          .get();
-        
-        const deadlineData = {
-          testId: testId,
-          groupId: currentGroupId,
-          deadline: firebase.firestore.Timestamp.fromDate(date),
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        
-        if (!existingDeadline.empty) {
-          // Обновляем существующий дедлайн
-          const docId = existingDeadline.docs[0].id;
-          await db.collection("deadlines").doc(docId).update(deadlineData);
-          alert('Срок сдачи успешно обновлен!');
-        } else {
-          // Создаем новый дедлайн
-          await db.collection("deadlines").add(deadlineData);
-          alert('Срок сдачи успешно добавлен!');
-        }
-        
-        // Перезагружаем данные таблицы
-        loadPerformanceData();
-        
-        // Очищаем форму
-        this.reset();
         
       } catch (error) {
-        console.error('Ошибка при сохранении дедлайна:', error);
-        alert('Произошла ошибка при сохранении срока сдачи');
+        console.error("ОШИБКА загрузки данных:", error);
+        tbody.innerHTML = `<tr><td colspan="100" class="text-center text-danger">Ошибка загрузки данных: ${error.message}</td></tr>`;
+        showStatus('Ошибка загрузки: ' + error.message, true);
+        updateDebugInfo({ error: error.message, stack: error.stack });
       }
-    });
-    
-    document.getElementById('transferForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      alert('Функция перевода студента будет реализована');
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Страница course-performance.html загружена');
+      
+      if (!localStorage.getItem('teacherId')) {
+        window.location.href = './login.html';
+        return;
+      }
+
+      const teacherNameEl = document.getElementById('teacherName');
+      if (teacherNameEl) {
+        const name = localStorage.getItem('teacherName') || '';
+        const surname = localStorage.getItem('teacherSurname') || '';
+        teacherNameEl.textContent = `${name} ${surname}`.trim();
+      }
+
+      const groupId = localStorage.getItem('currentGroupId');
+      const groupName = localStorage.getItem('currentGroupName');
+      const courseId = localStorage.getItem('currentCourseId');
+      const courseName = localStorage.getItem('currentCourseName');
+
+      console.log('Данные из localStorage:', {
+        groupId,
+        groupName,
+        courseId,
+        courseName
+      });
+
+      const groupTitle = document.getElementById('groupNameTitle');
+      const courseTitle = document.getElementById('courseNameTitle');
+      
+      if (groupTitle) groupTitle.textContent = groupName || 'Группа не выбрана';
+      if (courseTitle) courseTitle.textContent = courseName || 'Курс не выбран';
+
+      loadPerformanceData();
+
+      const deadlineForm = document.getElementById('deadlineForm');
+      if (deadlineForm) {
+        deadlineForm.addEventListener('submit', handleDeadlineSubmit);
+      }
+
+      const transferForm = document.getElementById('transferForm');
+      if (transferForm) {
+        transferForm.addEventListener('submit', handleTransferSubmit);
+      }
     });
   </script>
 </body>

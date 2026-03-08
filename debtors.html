@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Learn Remote - Админ</title>
+  <title>Learn Remote - Должники по группам</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
   <link rel="stylesheet" href="./css/style.css">
 </head>
@@ -26,41 +26,20 @@
   </nav>
 
   <div class="container">
-    <h2 class="mb-4">Панель администратора</h2>
+    <h2 class="mb-4">Должники по группам</h2>
 
-    <div class="card mb-4">
-      <div class="card-header bg-info text-white">
-        <h5 class="mb-0">Сгенерировать код приглашения</h5>
-      </div>
-      <div class="card-body">
-        <button class="btn btn-primary" onclick="generateInviteCode()">Сгенерировать код приглашения</button>
-        <div id="codeMessage" class="mt-2"></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header bg-info text-white">
-        <h5 class="mb-0">Список преподавателей</h5>
-      </div>
-      <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-          <thead class="thead-light">
-            <tr>
-              <th>Имя</th>
-              <th>Фамилия</th>
-              <th>Email</th>
-              <th>Дата последнего входа</th>
-            </tr>
-          </thead>
-          <tbody id="teachersList">
-          </tbody>
-        </table>
+    <div id="groupsList">
+      <div class="text-center">
+        <div class="spinner-border text-primary" role="status">
+          <span class="sr-only">Загрузка...</span>
+        </div>
+        <p class="mt-2">Загрузка групп...</p>
       </div>
     </div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="./js/admin.js"></script>
+  <script src="./js/debtors.js"></script>
 </body>
 </html>

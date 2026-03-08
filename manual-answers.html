@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learn Remote - Ручная проверка</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <nav class="navbar navbar-expand-md navbar-light bg-light fixed-top">
+    <a class="navbar-brand font-weight-bold" href="./courses.html">Learn Remote</a>
+    <div class="navbar-nav mr-auto">
+      <a class="nav-link" href="./courses.html">Курсы</a>
+      <a class="nav-link" href="./groups.html">Группы</a>
+      <a class="nav-link" href="./notifications.html">Уведомления</a>
+      <a class="nav-link" href="./material.html">Материалы</a>
+      <a class="nav-link" href="./debtors.html">Должники</a>
+      <a class="nav-link active" href="./manual-answers.html">Ручная проверка</a>
+      <a class="nav-link" href="./admin.html">Админ</a>
+    </div>
+    <div class="navbar-text mr-3">
+      <strong id="teacherName"></strong>
+    </div>
+    <a class="nav-link text-danger font-weight-bold" href="#" onclick="logout()">Exit</a>
+  </nav>
+
+  <div class="container">
+    <h2 class="mb-4">Ручная проверка работ</h2>
+
+    <div class="filter-section">
+      <div class="form-row">
+        <div class="form-group col-md-6">
+          <label for="groupFilter">Выберите группу:</label>
+          <select id="groupFilter" class="form-control" onchange="loadManualAnswers()">
+            <option value="">Все группы</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <ul class="nav nav-tabs" id="answerTabs" role="tablist">
+      <li class="nav-item">
+        <a class="nav-link active" id="pending-tab" data-toggle="tab" href="#pending" role="tab">
+          Непроверенные <span class="badge badge-danger ml-1" id="pendingCount">0</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="checked-tab" data-toggle="tab" href="#checked" role="tab">
+           Проверенные <span class="badge badge-success ml-1" id="checkedCount">0</span>
+        </a>
+      </li>
+    </ul>
+
+    <div class="tab-content" id="answerTabsContent">
+      <div class="tab-pane fade show active" id="pending" role="tabpanel">
+        <div id="pendingAnswersList" class="mt-3">
+          <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+              <span class="sr-only">Загрузка...</span>
+            </div>
+            <p class="mt-2">Загрузка работ...</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="checked" role="tabpanel">
+        <div id="checkedAnswersList" class="mt-3">
+          <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+              <span class="sr-only">Загрузка...</span>
+            </div>
+            <p class="mt-2">Загрузка работ...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="rateAnswerModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">Оценка работы</h5>
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="student-info" id="modalStudentName"></div>
+          <div class="test-info" id="modalTestInfo"></div>
+          
+          <div class="question-text" id="modalQuestionText"></div>
+          <div class="answer-text" id="modalAnswerText"></div>
+          
+          <div class="form-group mt-3">
+            <label for="scoreInput"><strong>Оценка:</strong></label>
+            <input type="number" id="scoreInput" class="form-control score-input" step="0.1" min="0" max="100">
+            <small class="text-muted">Максимальный балл: 100</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Отмена</button>
+          <button type="button" class="btn btn-primary" onclick="saveGrade()" id="saveGradeBtn">
+            Сохранить оценку
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="editGradeModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-info text-white">
+          <h5 class="modal-title">Редактирование оценки</h5>
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="student-info" id="editStudentName"></div>
+          <div class="test-info" id="editTestInfo"></div>
+          
+          <div class="question-text" id="editQuestionText"></div>
+          <div class="answer-text" id="editAnswerText"></div>
+          
+          <div class="form-group mt-3">
+            <label for="editScoreInput"><strong>Оценка:</strong></label>
+            <input type="number" id="editScoreInput" class="form-control score-input" step="0.1" min="0" max="100">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Отмена</button>
+          <button type="button" class="btn btn-info" onclick="updateGrade()" id="updateGradeBtn">
+            Обновить оценку
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="deleteAnswerModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">Удаление ответа</h5>
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>Вы уверены, что хотите удалить этот ответ?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Отмена</button>
+          <button type="button" class="btn btn-primary" onclick="confirmDeleteAnswer()" id="deleteAnswerBtn">
+            Удалить
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  <script src="./js/manual-answers.js"></script>
+</body>
+</html>

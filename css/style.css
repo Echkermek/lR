@@ -1,0 +1,445 @@
+/* Общие стили для всего приложения */
+body { 
+  padding-top: 80px; 
+  background-color: #f8f9fa; 
+  font-family: Arial, sans-serif;
+}
+
+.btn-primary { 
+  background-color: #17a2b8; 
+  border-color: #17a2b8; 
+}
+
+.btn-primary:hover { 
+  background-color: #138496; 
+  border-color: #117a8b; 
+}
+
+.btn-danger { 
+  background-color: #dc3545; 
+  border-color: #dc3545; 
+}
+
+.btn-info { 
+  background-color: #17a2b8; 
+  border-color: #17a2b8; 
+  color: white;
+}
+
+/* Стили для контейнеров аутентификации */
+.login-container, .register-container { 
+  max-width: 400px; 
+  margin: 0 auto; 
+}
+
+/* Стили для навигации */
+.navbar-nav .nav-link.active {
+  font-weight: 600;
+  color: #17a2b8 !important;
+}
+
+/* Стили для карточек и элементов */
+.course-card, .group-card, .answer-card, .lecture-item, .test-item { 
+  border-radius: 4px;
+  margin-bottom: 10px;
+  padding: 12px;
+  background: white;
+  border: 1px solid #dee2e6;
+}
+
+.course-card.completed {
+  background-color: #f8f9fa;
+  border-left: 4px solid #6c757d;
+  opacity: 0.9;
+}
+
+/* Стили для вкладок */
+.nav-tabs .nav-link {
+  color: #495057;
+  font-weight: 500;
+}
+
+.nav-tabs .nav-link.active {
+  color: #17a2b8;
+  border-bottom: 3px solid #17a2b8;
+}
+
+.tab-content {
+  background: white;
+  padding: 20px;
+  border: 1px solid #dee2e6;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  margin-bottom: 20px;
+}
+
+/* Стили для пустых состояний */
+.empty-state {
+  padding: 40px;
+  text-align: center;
+  color: #6c757d;
+  background: white;
+  border-radius: 8px;
+  border: 1px dashed #dee2e6;
+}
+
+/* Стили для таблиц */
+.table th { 
+  background-color: #f8f9fa; 
+  text-align: center; 
+  vertical-align: middle; 
+}
+
+.table td { 
+  text-align: center; 
+  vertical-align: middle; 
+}
+
+/* Контейнер с прокруткой для таблиц */
+.table-responsive { 
+  margin-bottom: 20px; 
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  max-height: 600px;
+}
+
+.table-responsive::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background-color: #17a2b8;
+  border-radius: 4px;
+}
+
+/* Фиксированная первая колонка в таблицах */
+.table th:first-child,
+.table td:first-child {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 10;
+  background-color: #f8f9fa !important;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+  border-right: 2px solid #dee2e6;
+  min-width: 200px;
+}
+
+.table td:first-child {
+  background-color: white !important;
+  text-align: left;
+  font-weight: bold;
+  z-index: 5;
+}
+
+.table thead th:first-child {
+  background-color: #f8f9fa !important;
+  z-index: 20 !important;
+}
+
+.table .deadline-row th {
+  background-color: #f8f9fa;
+  font-size: 0.9em;
+}
+
+.table .test-part {
+  background-color: #f8f9fa;
+  font-weight: normal;
+  font-size: 0.85em;
+  color: #666;
+}
+
+/* Цвета для оценок */
+.bg-excellent { background-color: #ccffcd; }
+.bg-good { background-color: #d4edda; }
+.bg-satisfactory { background-color: #fff3cd; }
+.bg-unsatisfactory { background-color: #f8d7da; }
+
+/* Стили для ручной проверки */
+.answer-card {
+  background: white;
+  border-left: 4px solid #ffc107;
+  margin-bottom: 15px;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  position: relative;
+}
+
+.answer-card.checked {
+  border-left-color: #28a745;
+}
+
+.student-info {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #17a2b8;
+  margin-bottom: 10px;
+}
+
+.test-info {
+  color: #6c757d;
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+}
+
+.question-text {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 5px;
+  margin: 10px 0;
+  border-left: 3px solid #17a2b8;
+}
+
+.answer-text {
+  background: #e8f5e9;
+  padding: 15px;
+  border-radius: 5px;
+  margin: 10px 0;
+  border-left: 3px solid #28a745;
+  white-space: pre-wrap;
+}
+
+.score-input {
+  width: 100px;
+  display: inline-block;
+  margin-right: 10px;
+}
+
+.filter-section {
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px solid #dee2e6;
+}
+
+.badge-pending {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.badge-checked {
+  background-color: #28a745;
+  color: white;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 15px;
+}
+
+/* Стили для материалов */
+.test-item, .lecture-item { 
+  border-radius: 4px;
+  margin-bottom: 10px;
+  padding: 12px;
+  background: white;
+  border: 1px solid #dee2e6;
+}
+
+.part-item, .question-item { 
+  background: #f8f9fa; 
+  border-radius: 4px; 
+  padding: 10px; 
+  margin: 5px 0; 
+  border-left: 3px solid #17a2b8;
+}
+
+.answer-item { 
+  display: flex; 
+  align-items: center; 
+  margin: 8px 0; 
+  padding: 10px;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+}
+
+.section-title { 
+  font-size: 1.2rem; 
+  font-weight: bold; 
+  color: #2c3e50; 
+  margin: 20px 0 10px; 
+  border-bottom: 1px solid #17a2b8; 
+  padding-bottom: 5px; 
+}
+
+.flex-grow-1 {
+  flex-grow: 1;
+}
+
+.create-card {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 30px;
+}
+
+.create-card h4 {
+  color: #17a2b8;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+/* Стили для уведомлений */
+.message-item { 
+  margin-bottom: 10px;
+  border-left: 3px solid #17a2b8;
+}
+
+.message-item.group { border-left-color: #17a2b8; }
+.message-item.student { border-left-color: #28a745; }
+.message-item:hover { background-color: #f8f9fa; }
+
+.recipient-badge { font-size: 0.8rem; }
+
+/* Стили для деталей курса */
+.course-info-card {
+  border-left: 3px solid #17a2b8;
+}
+
+.assigned-group {
+  background: #e8f5e8;
+  border-radius: 15px;
+  padding: 5px 12px;
+  display: inline-block;
+  margin: 3px;
+}
+
+.add-item-card {
+  background: #efeeee;
+  border: 1px dashed #ffffff;
+}
+
+.dropdown-checkbox {
+  width: 100%;
+  text-align: left;
+}
+
+.dropdown-checkbox .btn {
+  width: 100%;
+  text-align: left;
+  background: white;
+  border: 1px solid #ced4da;
+}
+
+.dropdown-menu {
+  width: 100%;
+  padding: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.dropdown-item {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.dropdown-item:hover {
+  background-color: #f0f8ff;
+}
+
+.course-completed {
+  background-color: #e2e3e5;
+  opacity: 0.8;
+}
+
+.badge-completed {
+  background-color: #6c757d;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  margin-left: 10px;
+  font-size: 0.8rem;
+}
+
+.complete-course-btn {
+  margin-left: 15px;
+}
+
+/* Стили для групп и должников */
+.group-item { 
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.group-item:hover { 
+  background-color: #f8f9fa; 
+}
+
+.student-item {
+  padding: 10px;
+  border-bottom: 1px solid #dee2e6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.student-item:last-child {
+  border-bottom: none;
+}
+
+.student-list {
+  margin-top: 15px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 5px;
+}
+
+.expand-btn {
+  color: #17a2b8;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.course-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.performance-btn {
+  margin-left: 15px;
+}
+
+/* Стили для деталей студента */
+.student-info-card {
+  background: white;
+  border-left: 4px solid #17a2b8;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Индикатор прокрутки */
+.scroll-hint {
+  text-align: right;
+  color: #6c757d;
+  font-size: 0.85rem;
+  margin-bottom: 5px;
+}
+
+.scroll-hint i {
+  font-style: normal;
+  background: #e9ecef;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+/* Групповые бейджи */
+.group-badge {
+  background: #e8f5e8;
+  border-radius: 12px;
+  padding: 3px 8px;
+  font-size: 0.8rem;
+  margin: 2px;
+  display: inline-block;
+}
