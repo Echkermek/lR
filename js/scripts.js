@@ -658,31 +658,43 @@ function initCoursePerformancePage() {
     teacherNameEl.textContent = `${name} ${surname}`.trim();
   }
   
+  // Загружаем данные из localStorage
   currentGroupId = localStorage.getItem('currentGroupId');
   currentGroupName = localStorage.getItem('currentGroupName');
   currentCourseId = localStorage.getItem('currentCourseId');
   currentCourseName = localStorage.getItem('currentCourseName');
   
-  console.log('Группа:', currentGroupName);
-  console.log('Курс:', currentCourseName);
+  console.log('Данные из localStorage:', {
+    currentGroupId,
+    currentGroupName,
+    currentCourseId,
+    currentCourseName
+  });
   
   if (!currentGroupId || !currentCourseId) {
     console.error('Данные группы или курса не найдены');
+    alert('Ошибка: данные группы или курса не найдены');
     window.location.href = './groups.html';
     return;
   }
   
+  // Отображаем названия
   const groupTitle = document.getElementById('groupNameTitle');
   const courseTitle = document.getElementById('courseNameTitle');
   
-  if (groupTitle) groupTitle.textContent = currentGroupName;
-  if (courseTitle) courseTitle.textContent = currentCourseName;
+  if (groupTitle) groupTitle.textContent = currentGroupName || 'Группа';
+  if (courseTitle) courseTitle.textContent = currentCourseName || 'Курс';
   
+  // Загружаем данные
   loadPerformanceData();
   
+  // Назначаем обработчики событий
   const deadlineForm = document.getElementById('deadlineForm');
   if (deadlineForm) {
+    console.log('Найден deadlineForm, назначаем обработчик');
     deadlineForm.addEventListener('submit', handleDeadlineSubmit);
+  } else {
+    console.error('deadlineForm не найден на странице');
   }
   
   const transferForm = document.getElementById('transferForm');
@@ -781,17 +793,39 @@ async function loadPerformanceData() {
 }
 
 // Функция для загрузки дедлайнов только для конкретной группы
+// Функция для загрузки дедлайнов только для конкретной группы
 async function loadDeadlinesForGroup(groupId) {
   const deadlinesMap = new Map();
   try {
+    console.log('Загрузка дедлайнов для группы:', groupId);
+    
+    // Получаем дедлайны для конкретной группы
     const snapshot = await db.collection("deadlines")
       .where("groupId", "==", groupId)
       .get();
     
+    console.log('Найдено дедлайнов:', snapshot.size);
+    
+    if (snapshot.empty) {
+      console.log('Дедлайнов для группы не найдено');
+      return deadlinesMap;
+    }
+    
     snapshot.forEach(doc => {
       const data = doc.data();
-      deadlinesMap.set(data.testId, data.deadline);
+      console.log('Документ дедлайна:', doc.id, data);
+      
+      // Проверяем наличие всех необходимых полей
+      if (data.testId && data.deadline) {
+        deadlinesMap.set(data.testId, data.deadline);
+        console.log('Дедлайн загружен для теста:', data.testId, data.deadline);
+      } else {
+        console.warn('Пропущен документ с неполными данными:', doc.id, data);
+      }
     });
+    
+    console.log('Итоговая карта дедлайнов:', Array.from(deadlinesMap.entries()));
+    
   } catch (error) {
     console.error("Ошибка загрузки дедлайнов:", error);
   }
@@ -878,6 +912,8 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
     return; 
   }
   
+  console.log('buildPerformanceTable - deadlinesMap:', Array.from(deadlinesMap.entries()));
+  
   // Проверяем, есть ли у тестов части
   let hasParts = false;
   for (const test of tests) {
@@ -911,6 +947,7 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
       const colSpan = parts.length > 0 ? parts.length : 1;
       const deadline = deadlinesMap.get(test.id);
       const deadlineText = deadline ? deadline : 'Нет срока';
+      console.log(`Тест ${test.name} (${test.id}) дедлайн:`, deadline, 'текст:', deadlineText);
       headerHTML += `<th colspan="${colSpan}" title="Срок сдачи: ${deadlineText}">${deadlineText}</th>`;
     });
     headerHTML += '</tr>';
@@ -951,7 +988,7 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
   
   header.innerHTML = headerHTML;
   
-  // Построение тела таблицы
+  // Построение тела таблицы (остальная часть функции без изменений)
   let tableHTML = '';
   
   students.forEach(student => {
@@ -1119,37 +1156,59 @@ function populateForms() {
 
 async function handleDeadlineSubmit(e) {
   e.preventDefault();
+  console.log('handleDeadlineSubmit вызван');
   
+  // Получаем элементы формы
   const testSelect = document.getElementById('testSelect');
   const deadlineDate = document.getElementById('deadlineDate');
   
-  // Получаем данные из глобальных переменных или из localStorage
-  const groupId = currentGroupId || localStorage.getItem('currentGroupId');
-  const groupName = currentGroupName || localStorage.getItem('currentGroupName');
-  
-  console.log('Debug - handleDeadlineSubmit:', {
-    groupId,
-    groupName,
-    currentGroupId,
-    currentGroupName
-  });
-  
-  if (!testSelect || !deadlineDate) {
-    console.error('Элементы формы не найдены');
+  // Проверяем наличие элементов
+  if (!testSelect) {
+    console.error('testSelect не найден');
+    alert('Ошибка: элемент выбора теста не найден');
     return;
   }
   
+  if (!deadlineDate) {
+    console.error('deadlineDate не найден');
+    alert('Ошибка: элемент выбора даты не найден');
+    return;
+  }
+  
+  // Получаем значения
   const testId = testSelect.value;
   const dateString = deadlineDate.value;
   
-  if (!testId || !dateString) {
-    alert('Пожалуйста, выберите тест и укажите дату');
+  console.log('Значения формы:', { testId, dateString });
+  console.log('Глобальные переменные:', { 
+    currentGroupId, 
+    currentGroupName, 
+    allTests 
+  });
+  
+  // Проверяем заполненность
+  if (!testId) {
+    alert('Пожалуйста, выберите тест');
     return;
   }
   
+  if (!dateString) {
+    alert('Пожалуйста, укажите дату');
+    return;
+  }
+  
+  // Находим выбранный тест
   const selectedTest = allTests.find(t => t.id === testId);
   if (!selectedTest) {
+    console.error('Тест не найден в allTests:', testId);
     alert('Ошибка: тест не найден');
+    return;
+  }
+  
+  // Проверяем наличие groupId
+  if (!currentGroupId) {
+    console.error('currentGroupId не определен');
+    alert('Ошибка: ID группы не определен');
     return;
   }
   
@@ -1159,47 +1218,51 @@ async function handleDeadlineSubmit(e) {
   submitBtn.disabled = true;
   
   try {
-    const formattedDate = dateString;
-    
     console.log('Сохранение дедлайна:', {
-      groupId,
-      groupName,
+      groupId: currentGroupId,
+      groupName: currentGroupName || 'Группа',
       testId: selectedTest.id,
       testTitle: selectedTest.name,
-      deadline: formattedDate
+      deadline: dateString
     });
     
-    // Проверяем существующий дедлайн для этой группы и теста
+    // Проверяем существующий дедлайн
     const existingDeadline = await db.collection("deadlines")
       .where("testId", "==", testId)
-      .where("groupId", "==", groupId)
+      .where("groupId", "==", currentGroupId)
       .get();
+    
+    console.log('Существующие дедлайны:', existingDeadline.size);
     
     if (!existingDeadline.empty) {
       // Обновляем существующий дедлайн
       const docId = existingDeadline.docs[0].id;
       await db.collection("deadlines").doc(docId).update({
-        deadline: formattedDate,
+        deadline: dateString,
         testTitle: selectedTest.name,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      alert(`Срок сдачи обновлен для группы ${groupName}`);
+      console.log('Дедлайн обновлен, документ:', docId);
+      alert(`Срок сдачи обновлен для группы ${currentGroupName || 'группы'}`);
     } else {
       // Создаем новый дедлайн
-      await db.collection("deadlines").add({
-        groupId: groupId,
-        groupName: groupName,
+      const docRef = await db.collection("deadlines").add({
+        groupId: currentGroupId,
+        groupName: currentGroupName || 'Группа',
         testId: selectedTest.id,
         testTitle: selectedTest.name,
-        deadline: formattedDate,
+        deadline: dateString,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      alert(`Срок сдачи установлен для группы ${groupName}`);
+      console.log('Дедлайн создан, документ:', docRef.id);
+      alert(`Срок сдачи установлен для группы ${currentGroupName || 'группы'}`);
     }
+    
+    // Очищаем форму
+    e.target.reset();
     
     // Перезагружаем данные
     await loadPerformanceData();
-    e.target.reset();
     
   } catch (error) {
     console.error('Ошибка при сохранении дедлайна:', error);
@@ -1209,7 +1272,6 @@ async function handleDeadlineSubmit(e) {
     submitBtn.disabled = false;
   }
 }
-
 async function handleTransferSubmit(e) {
   e.preventDefault();
   
