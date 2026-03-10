@@ -294,19 +294,26 @@ async function renderCourses(courses, containerId, isCompleted) {
         .where("courseId", "==", course.id)
         .get();
       
-      const assignedGroups = [];
+      // Используем Map для уникальных групп
+      const assignedGroupsMap = new Map();
       
       for (const courseGroupDoc of courseGroupsSnap.docs) {
         const courseGroupData = courseGroupDoc.data();
-        const groupDoc = await db.collection("groups").doc(courseGroupData.groupId).get();
+        const groupId = courseGroupData.groupId;
         
-        if (groupDoc.exists) {
-          assignedGroups.push({
-            name: groupDoc.data().name,
-            semester: courseGroupData.semester
-          });
+        if (!assignedGroupsMap.has(groupId)) {
+          const groupDoc = await db.collection("groups").doc(groupId).get();
+          
+          if (groupDoc.exists) {
+            assignedGroupsMap.set(groupId, {
+              name: groupDoc.data().name,
+              semester: courseGroupData.semester
+            });
+          }
         }
       }
+      
+      const assignedGroups = Array.from(assignedGroupsMap.values());
       
       const col = document.createElement('div');
       col.className = 'col-md-6 col-lg-4 mb-3';
@@ -407,15 +414,22 @@ function loadGroups() {
       return;
     }
     
-    let html = '<div class="list-group">';
+    // Используем Map для уникальных групп
+    const uniqueGroupsMap = new Map();
     snap.forEach(doc => {
-      const group = doc.data();
+      if (!uniqueGroupsMap.has(doc.id)) {
+        uniqueGroupsMap.set(doc.id, doc.data());
+      }
+    });
+    
+    let html = '<div class="list-group">';
+    uniqueGroupsMap.forEach((group, id) => {
       html += `
         <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-          <span onclick="showGroupCourses('${doc.id}', '${group.name}')" style="cursor: pointer; flex-grow: 1;">
+          <span onclick="showGroupCourses('${id}', '${group.name}')" style="cursor: pointer; flex-grow: 1;">
             ${group.name}
           </span>
-          <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteGroup('${doc.id}')">
+          <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteGroup('${id}')">
             Удалить
           </button>
         </div>
@@ -533,46 +547,79 @@ async function loadGroupCourses(groupId) {
       return;
     }
 
-    coursesList.innerHTML = '';
+    // Используем Map для уникальных курсов по courseId
+    const uniqueCoursesMap = new Map();
     
     for (const doc of courseGroupsSnapshot.docs) {
       const data = doc.data();
       const courseId = data.courseId;
-      const semester = data.semester || 'Не указан';
       
-      console.log('Загрузка курса:', courseId);
-      
-      const courseDoc = await db.collection("courses").doc(courseId).get();
-      
-      if (courseDoc.exists) {
-        const courseData = courseDoc.data();
-        const courseName = courseData.name || 'Без названия';
-        const isCompleted = courseData.completed || false;
+      // Если курс уже есть в Map, пропускаем (оставляем только первую запись)
+      if (!uniqueCoursesMap.has(courseId)) {
+        const semester = data.semester || 'Не указан';
         
-        const courseItem = document.createElement('div');
-        courseItem.className = 'card mb-3 course-item';
-        courseItem.style.cursor = 'pointer';
-        courseItem.onclick = () => showCoursePerformance(courseId, courseName);
+        console.log('Загрузка курса:', courseId);
         
-        courseItem.innerHTML = `
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-              <div>
-                <h5 class="card-title mb-1">${courseName}</h5>
-                <p class="card-text text-muted">
-                  <small>Семестр: ${semester}</small>
-                  ${isCompleted ? '<br><small class="text-secondary">Курс завершен</small>' : ''}
-                </p>
-              </div>
-              <span class="badge badge-info">Подробнее →</span>
-            </div>
-          </div>
-        `;
+        const courseDoc = await db.collection("courses").doc(courseId).get();
         
-        coursesList.appendChild(courseItem);
+        if (courseDoc.exists) {
+          const courseData = courseDoc.data();
+          const courseName = courseData.name || 'Без названия';
+          const isCompleted = courseData.completed || false;
+          
+          uniqueCoursesMap.set(courseId, {
+            id: courseId,
+            name: courseName,
+            semester: semester,
+            isCompleted: isCompleted
+          });
+        } else {
+          console.warn('Курс не найден:', courseId);
+        }
       } else {
-        console.warn('Курс не найден:', courseId);
+        console.log('Дублирующаяся запись курса пропущена:', courseId);
       }
+    }
+
+    coursesList.innerHTML = '';
+    
+    if (uniqueCoursesMap.size === 0) {
+      coursesList.innerHTML = '<p class="text-center text-muted">Не удалось загрузить курсы</p>';
+      return;
+    }
+    
+    // Преобразуем Map в массив и сортируем по названию
+    const sortedCourses = Array.from(uniqueCoursesMap.values()).sort((a, b) => 
+      a.name.localeCompare(b.name)
+    );
+    
+    sortedCourses.forEach(course => {
+      const courseItem = document.createElement('div');
+      courseItem.className = 'card mb-3 course-item';
+      courseItem.style.cursor = 'pointer';
+      courseItem.onclick = () => showCoursePerformance(course.id, course.name);
+      
+      courseItem.innerHTML = `
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h5 class="card-title mb-1">${course.name}</h5>
+              <p class="card-text text-muted">
+                <small>Семестр: ${course.semester}</small>
+                ${course.isCompleted ? '<br><small class="text-secondary">Курс завершен</small>' : ''}
+              </p>
+            </div>
+            <span class="badge badge-info">Подробнее →</span>
+          </div>
+        </div>
+      `;
+      
+      coursesList.appendChild(courseItem);
+    });
+    
+    // Если были дубликаты, показываем предупреждение
+    if (courseGroupsSnapshot.size > uniqueCoursesMap.size) {
+      console.warn(`Обнаружено ${courseGroupsSnapshot.size - uniqueCoursesMap.size} дублирующихся записей курсов`);
     }
     
   } catch (error) {
@@ -588,7 +635,7 @@ function showCoursePerformance(courseId, courseName) {
   window.location.href = './course-performance.html';
 }
 
-// ========== ФУНКЦИИ ДЛЯ COURSE-PERFORMANCE.HTML ==========
+/// ========== ФУНКЦИИ ДЛЯ COURSE-PERFORMANCE.HTML ==========
 
 let currentGroupId = null;
 let currentGroupName = null;
@@ -682,6 +729,7 @@ async function loadPerformanceData() {
       }
     });
     
+    // Запрос тестов курса
     const testCourseSnapshot = await db.collection("test_course")
       .where("courseId", "==", currentCourseId)
       .get();
@@ -691,31 +739,36 @@ async function loadPerformanceData() {
       return; 
     }
     
-    allTests = [];
-    const testPromises = [];
+    // ИСПРАВЛЕНИЕ: Используем Map для уникальных тестов
+    const uniqueTestsMap = new Map();
     
-    testCourseSnapshot.forEach(doc => {
+    for (const doc of testCourseSnapshot.docs) {
       const data = doc.data();
-      testPromises.push(
-        db.collection("tests").doc(data.testId).get().then(testDoc => {
-          if (testDoc.exists) {
-            const testData = testDoc.data();
-            return { 
-              id: data.testId, 
-              name: testData.title || 'Без названия', 
-              num: testData.num || 0 
-            };
-          }
-          return null;
-        })
-      );
-    });
+      const testId = data.testId;
+      
+      // Добавляем только если такого testId еще нет
+      if (!uniqueTestsMap.has(testId)) {
+        const testDoc = await db.collection("tests").doc(testId).get();
+        if (testDoc.exists) {
+          const testData = testDoc.data();
+          uniqueTestsMap.set(testId, { 
+            id: testId, 
+            name: testData.title || 'Без названия', 
+            num: testData.num || 0 
+          });
+        }
+      }
+    }
     
-    const tests = await Promise.all(testPromises);
-    allTests = tests.filter(t => t !== null).sort((a, b) => a.num - b.num);
+    // Преобразуем Map в массив и сортируем
+    allTests = Array.from(uniqueTestsMap.values()).sort((a, b) => a.num - b.num);
+    
+    console.log('Загружено уникальных тестов:', allTests.length);
+    console.log('Всего записей test_course:', testCourseSnapshot.size);
     
     await loadTestParts();
-    const deadlinesMap = await loadDeadlines();
+    // Загружаем дедлайны только для этой группы
+    const deadlinesMap = await loadDeadlinesForGroup(currentGroupId);
     const gradesMap = await loadTestGrades(studentIds);
     
     buildPerformanceTable(allStudents, allTests, gradesMap, deadlinesMap);
@@ -725,6 +778,29 @@ async function loadPerformanceData() {
     console.error("Ошибка загрузки данных:", error);
     tbody.innerHTML = '<tr><td colspan="100" class="text-center text-danger">Ошибка загрузки данных</td></tr>';
   }
+}
+
+// Функция для загрузки дедлайнов только для конкретной группы
+async function loadDeadlinesForGroup(groupId) {
+  const deadlinesMap = new Map();
+  try {
+    const snapshot = await db.collection("deadlines")
+      .where("groupId", "==", groupId)
+      .get();
+    
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      deadlinesMap.set(data.testId, data.deadline);
+    });
+  } catch (error) {
+    console.error("Ошибка загрузки дедлайнов:", error);
+  }
+  return deadlinesMap;
+}
+
+// Сохраняем старую функцию для обратной совместимости
+async function loadDeadlines() {
+  return loadDeadlinesForGroup(currentGroupId);
 }
 
 async function loadTestParts() {
@@ -754,26 +830,10 @@ async function loadTestParts() {
   }
 }
 
-async function loadDeadlines() {
-  const deadlinesMap = new Map();
-  try {
-    const snapshot = await db.collection("deadlines")
-      .where("groupId", "==", currentGroupId)
-      .get();
-    
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      deadlinesMap.set(data.testId, data.deadline);
-    });
-  } catch (error) {
-    console.error("Ошибка загрузки дедлайнов:", error);
-  }
-  return deadlinesMap;
-}
-
 async function loadTestGrades(studentIds) {
   const gradesMap = new Map();
   try {
+    // Загружаем оценки для каждого уникального теста
     const allGrades = await Promise.all(
       allTests.map(test => 
         db.collection("test_grades")
@@ -787,11 +847,16 @@ async function loadTestGrades(studentIds) {
       const testId = allTests[i].id;
       snap.forEach(doc => {
         const data = doc.data();
-        gradesMap.set(`${data.userId}_${testId}`, { 
-          score: data.bestScore || 0, 
-          date: data.timestamp,
-          docId: doc.id
-        });
+        const key = `${data.userId}_${testId}`;
+        
+        // Сохраняем только лучший результат для каждого студента и теста
+        if (!gradesMap.has(key) || (data.bestScore > gradesMap.get(key).score)) {
+          gradesMap.set(key, { 
+            score: data.bestScore || 0, 
+            date: data.timestamp,
+            docId: doc.id
+          });
+        }
       });
     });
   } catch (error) {
@@ -813,46 +878,80 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
     return; 
   }
   
-  let headerHTML = '<tr>';
-  headerHTML += '<th rowspan="3" style="min-width: 200px;">Студент</th>';
-  
-  tests.forEach(test => {
+  // Проверяем, есть ли у тестов части
+  let hasParts = false;
+  for (const test of tests) {
     const parts = testPartsMap.get(test.id) || [];
-    const colSpan = parts.length || 1;
-    headerHTML += `<th colspan="${colSpan}">${test.name}</th>`;
-  });
-  
-  headerHTML += '<th rowspan="3" style="min-width: 100px;">Оценка</th>';
-  headerHTML += '</tr>';
-  
-  headerHTML += '<tr class="deadline-row">';
-  
-  tests.forEach(test => {
-    const parts = testPartsMap.get(test.id) || [];
-    const colSpan = parts.length || 1;
-    const deadline = deadlinesMap.get(test.id);
-    const deadlineText = deadline ? deadline : 'Нет срока';
-    headerHTML += `<th colspan="${colSpan}" title="Срок сдачи: ${deadlineText}">${deadlineText}</th>`;
-  });
-  
-  headerHTML += '</tr>';
-  
-  headerHTML += '<tr>';
-  
-  tests.forEach(test => {
-    const parts = testPartsMap.get(test.id) || [];
-    if (parts.length) {
-      parts.forEach(p => {
-        headerHTML += `<th class="test-part" title="${p.name}">${p.name}</th>`;
-      });
-    } else {
-      headerHTML += '<th class="test-part" title="Тест">Тест</th>';
+    if (parts.length > 0) {
+      hasParts = true;
+      break;
     }
-  });
+  }
   
-  headerHTML += '</tr>';
+  let headerHTML = '<tr>';
+  
+  if (hasParts) {
+    // Если есть части, показываем их
+    headerHTML += '<th rowspan="3" style="min-width: 200px;">Студент</th>';
+    
+    tests.forEach(test => {
+      const parts = testPartsMap.get(test.id) || [];
+      // Если у теста нет частей, показываем одну колонку
+      const colSpan = parts.length > 0 ? parts.length : 1;
+      headerHTML += `<th colspan="${colSpan}">${test.name}</th>`;
+    });
+    
+    headerHTML += '<th rowspan="3" style="min-width: 100px;">Оценка</th>';
+    headerHTML += '</tr>';
+    
+    // Строка с дедлайнами
+    headerHTML += '<tr class="deadline-row">';
+    tests.forEach(test => {
+      const parts = testPartsMap.get(test.id) || [];
+      const colSpan = parts.length > 0 ? parts.length : 1;
+      const deadline = deadlinesMap.get(test.id);
+      const deadlineText = deadline ? deadline : 'Нет срока';
+      headerHTML += `<th colspan="${colSpan}" title="Срок сдачи: ${deadlineText}">${deadlineText}</th>`;
+    });
+    headerHTML += '</tr>';
+    
+    // Строка с названиями частей
+    headerHTML += '<tr>';
+    tests.forEach(test => {
+      const parts = testPartsMap.get(test.id) || [];
+      if (parts.length > 0) {
+        parts.forEach(p => {
+          headerHTML += `<th class="test-part" title="${p.name}">${p.name}</th>`;
+        });
+      } else {
+        headerHTML += `<th class="test-part" title="${test.name}">Тест</th>`;
+      }
+    });
+    headerHTML += '</tr>';
+  } else {
+    // Если у тестов нет частей, показываем простую таблицу
+    headerHTML += '<th>Студент</th>';
+    tests.forEach(test => {
+      headerHTML += `<th>${test.name}</th>`;
+    });
+    headerHTML += '<th>Оценка</th>';
+    headerHTML += '</tr>';
+    
+    // Добавляем строку с дедлайнами
+    headerHTML += '<tr class="deadline-row">';
+    headerHTML += '<th></th>';
+    tests.forEach(test => {
+      const deadline = deadlinesMap.get(test.id);
+      const deadlineText = deadline ? deadline : 'Нет срока';
+      headerHTML += `<th title="Срок сдачи: ${deadlineText}">${deadlineText}</th>`;
+    });
+    headerHTML += '<th></th>';
+    headerHTML += '</tr>';
+  }
+  
   header.innerHTML = headerHTML;
   
+  // Построение тела таблицы
   let tableHTML = '';
   
   students.forEach(student => {
@@ -865,7 +964,8 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
       const key = `${student.id}_${test.id}`;
       const grade = gradesMap.get(key);
       
-      if (parts.length) {
+      if (hasParts && parts.length > 0) {
+        // Если есть части, показываем оценку в каждой части
         parts.forEach((part) => {
           if (grade) { 
             totalScore += grade.score; 
@@ -883,6 +983,7 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
           }
         });
       } else {
+        // Если нет частей, показываем одну колонку для теста
         if (grade) { 
           totalScore += grade.score; 
           testsTaken++; 
@@ -974,11 +1075,11 @@ async function confirmResetAttempt() {
 
     $('#resetAttemptModal').modal('hide');
     await loadPerformanceData();
-    alert('✅ Попытка успешно сброшена');
+    alert('Попытка успешно сброшена');
 
   } catch (error) {
     console.error("Ошибка сброса попытки:", error);
-    alert('❌ Ошибка сброса попытки: ' + error.message);
+    alert('Ошибка сброса попытки: ' + error.message);
   } finally {
     confirmBtn.innerHTML = originalText;
     confirmBtn.disabled = false;
@@ -989,6 +1090,7 @@ function populateForms() {
   const testSelect = document.getElementById('testSelect');
   if (testSelect) {
     testSelect.innerHTML = '<option value="">Выберите тест</option>';
+    // Используем allTests (уже уникальные тесты)
     allTests.forEach(t => {
       testSelect.innerHTML += `<option value="${t.id}">${t.name}</option>`;
     });
@@ -1021,7 +1123,21 @@ async function handleDeadlineSubmit(e) {
   const testSelect = document.getElementById('testSelect');
   const deadlineDate = document.getElementById('deadlineDate');
   
-  if (!testSelect || !deadlineDate) return;
+  // Получаем данные из глобальных переменных или из localStorage
+  const groupId = currentGroupId || localStorage.getItem('currentGroupId');
+  const groupName = currentGroupName || localStorage.getItem('currentGroupName');
+  
+  console.log('Debug - handleDeadlineSubmit:', {
+    groupId,
+    groupName,
+    currentGroupId,
+    currentGroupName
+  });
+  
+  if (!testSelect || !deadlineDate) {
+    console.error('Элементы формы не найдены');
+    return;
+  }
   
   const testId = testSelect.value;
   const dateString = deadlineDate.value;
@@ -1045,39 +1161,49 @@ async function handleDeadlineSubmit(e) {
   try {
     const formattedDate = dateString;
     
-    const deadlineData = {
-      groupId: currentGroupId,
-      groupName: currentGroupName,
+    console.log('Сохранение дедлайна:', {
+      groupId,
+      groupName,
       testId: selectedTest.id,
       testTitle: selectedTest.name,
-      deadline: formattedDate,
-      createdAt: Date.now()
-    };
+      deadline: formattedDate
+    });
     
+    // Проверяем существующий дедлайн для этой группы и теста
     const existingDeadline = await db.collection("deadlines")
       .where("testId", "==", testId)
-      .where("groupId", "==", currentGroupId)
+      .where("groupId", "==", groupId)
       .get();
     
     if (!existingDeadline.empty) {
+      // Обновляем существующий дедлайн
       const docId = existingDeadline.docs[0].id;
       await db.collection("deadlines").doc(docId).update({
         deadline: formattedDate,
         testTitle: selectedTest.name,
-        createdAt: Date.now()
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      alert(`✅ Срок сдачи обновлен для группы ${currentGroupName}`);
+      alert(`Срок сдачи обновлен для группы ${groupName}`);
     } else {
-      await db.collection("deadlines").add(deadlineData);
-      alert(`✅ Срок сдачи установлен для группы ${currentGroupName}`);
+      // Создаем новый дедлайн
+      await db.collection("deadlines").add({
+        groupId: groupId,
+        groupName: groupName,
+        testId: selectedTest.id,
+        testTitle: selectedTest.name,
+        deadline: formattedDate,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      alert(`Срок сдачи установлен для группы ${groupName}`);
     }
     
+    // Перезагружаем данные
     await loadPerformanceData();
     e.target.reset();
     
   } catch (error) {
     console.error('Ошибка при сохранении дедлайна:', error);
-    alert('❌ Ошибка при сохранении срока сдачи: ' + error.message);
+    alert('Ошибка при сохранении срока сдачи: ' + error.message);
   } finally {
     submitBtn.innerHTML = originalText;
     submitBtn.disabled = false;
@@ -1114,12 +1240,12 @@ async function handleTransferSubmit(e) {
   
   try {
     await transferStudent(studentId, newGroupId);
-    alert(`✅ Студент успешно переведен в группу ${groupName}`);
+    alert(`Студент успешно переведен в группу ${groupName}`);
     await loadPerformanceData();
     e.target.reset();
   } catch (error) {
     console.error('Ошибка при переводе студента:', error);
-    alert('❌ Ошибка при переводе студента: ' + error.message);
+    alert('Ошибка при переводе студента: ' + error.message);
   } finally {
     submitBtn.innerHTML = originalText;
     submitBtn.disabled = false;

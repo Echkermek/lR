@@ -1,4 +1,3 @@
-// Firebase конфигурация
 const firebaseConfig = {
   apiKey: "AIzaSyD2QJQcuUI9lCJP_kqp5tW24J8TN6phPWw",
   authDomain: "prob1-5c047.firebaseapp.com",
@@ -33,7 +32,6 @@ let selectedTests = new Set();
 let lecturesData = [];
 let testsData = [];
 
-// Загрузка данных
 document.addEventListener('DOMContentLoaded', function() {
   checkCourseStatus();
   loadAssignedGroups();
@@ -186,17 +184,24 @@ function loadAssignedGroups() {
         return;
       }
 
-      const groupPromises = [];
+      // ИСПРАВЛЕНИЕ: Используем Map для уникальных групп
+      const uniqueGroupsMap = new Map();
       const courseGroups = [];
       
       snap.forEach(doc => {
         const courseGroup = doc.data();
-        courseGroup.id = doc.id;
-        courseGroups.push(courseGroup);
+        const groupId = courseGroup.groupId;
         
-        const groupPromise = db.collection("groups").doc(courseGroup.groupId).get();
-        groupPromises.push(groupPromise);
+        if (!uniqueGroupsMap.has(groupId)) {
+          uniqueGroupsMap.set(groupId, true);
+          courseGroup.id = doc.id;
+          courseGroups.push(courseGroup);
+        }
       });
+
+      const groupPromises = courseGroups.map(courseGroup => 
+        db.collection("groups").doc(courseGroup.groupId).get()
+      );
 
       Promise.all(groupPromises).then(groupSnaps => {
         assignedGroupsContainer.innerHTML = "";
@@ -220,6 +225,7 @@ function loadAssignedGroups() {
     });
 }
 
+// ИСПРАВЛЕНИЕ: Функция загрузки тестов с уникальными тестами
 function loadCourseTests() {
   db.collection("test_course")
     .where("courseId", "==", courseId)
@@ -232,16 +238,32 @@ function loadCourseTests() {
         return;
       }
 
-      const testPromises = [];
-      const testCourseData = [];
+      // ИСПРАВЛЕНИЕ: Используем Map для уникальных тестов по testId
+      const uniqueTestsMap = new Map();
       
       snap.forEach(doc => {
         const testCourse = doc.data();
-        testCourse.id = doc.id;
-        testCourseData.push(testCourse);
+        const testId = testCourse.testId;
         
-        const testPromise = db.collection("tests").doc(testCourse.testId).get();
-        testPromises.push(testPromise);
+        // Если тест еще не добавлен, добавляем его
+        if (!uniqueTestsMap.has(testId)) {
+          uniqueTestsMap.set(testId, {
+            id: doc.id,
+            testId: testId,
+            courseId: testCourse.courseId,
+            assignedAt: testCourse.assignedAt
+          });
+        } else {
+          console.log('Найден дубликат теста:', testId);
+        }
+      });
+
+      const testPromises = [];
+      const testCourseData = [];
+      
+      uniqueTestsMap.forEach((value, testId) => {
+        testCourseData.push(value);
+        testPromises.push(db.collection("tests").doc(testId).get());
       });
 
       try {
@@ -275,6 +297,12 @@ function loadCourseTests() {
             loadTestParts(testSnap.id, testData);
           }
         });
+
+        // Если были дубликаты, показываем предупреждение
+        if (snap.size > uniqueTestsMap.size) {
+          console.warn(`Обнаружено ${snap.size - uniqueTestsMap.size} дублирующихся записей тестов`);
+        }
+
       } catch (error) {
         console.error("Ошибка загрузки тестов:", error);
         container.innerHTML = `<p class="text-danger text-center">Ошибка загрузки тестов: ${error.message}</p>`;
@@ -319,16 +347,29 @@ function loadCourseLectures() {
         return;
       }
 
-      const lecturePromises = [];
-      const lectureCourseData = [];
+      // ИСПРАВЛЕНИЕ: Используем Map для уникальных лекций
+      const uniqueLecturesMap = new Map();
       
       snap.forEach(doc => {
         const lectureCourse = doc.data();
-        lectureCourse.id = doc.id;
-        lectureCourseData.push(lectureCourse);
+        const lectureId = lectureCourse.lectureId;
         
-        const lecturePromise = db.collection("lections").doc(lectureCourse.lectureId).get();
-        lecturePromises.push(lecturePromise);
+        if (!uniqueLecturesMap.has(lectureId)) {
+          uniqueLecturesMap.set(lectureId, {
+            id: doc.id,
+            lectureId: lectureId,
+            courseId: lectureCourse.courseId,
+            assignedAt: lectureCourse.assignedAt
+          });
+        }
+      });
+
+      const lecturePromises = [];
+      const lectureCourseData = [];
+      
+      uniqueLecturesMap.forEach((value, lectureId) => {
+        lectureCourseData.push(value);
+        lecturePromises.push(db.collection("lections").doc(lectureId).get());
       });
 
       try {
@@ -468,11 +509,11 @@ async function addSelectedLectures() {
     selectedLectures.clear();
     updateSelectedLecturesText();
     
-    alert(`✅ Успешно добавлено ${promises.length} лекций`);
+    alert(`Успешно добавлено ${promises.length} лекций`);
     
   } catch (error) {
     console.error("Ошибка добавления лекций:", error);
-    alert("❌ Ошибка добавления лекций: " + error.message);
+    alert("Ошибка добавления лекций: " + error.message);
   } finally {
     addBtn.innerHTML = originalText;
   }
@@ -522,11 +563,11 @@ async function addSelectedTests() {
     selectedTests.clear();
     updateSelectedTestsText();
     
-    alert(`✅ Успешно добавлено ${promises.length} тестов`);
+    alert(`Успешно добавлено ${promises.length} тестов`);
     
   } catch (error) {
     console.error("Ошибка добавления тестов:", error);
-    alert("❌ Ошибка добавления тестов: " + error.message);
+    alert("Ошибка добавления тестов: " + error.message);
   } finally {
     addBtn.innerHTML = originalText;
   }
@@ -559,6 +600,7 @@ function assignGroupToCourse() {
       .then(snap => {
         if (!snap.empty) {
           alert("Эта группа уже назначена данному курсу");
+          document.getElementById("semesterInput").value = "";
           return;
         }
 
@@ -569,6 +611,7 @@ function assignGroupToCourse() {
           assignedAt: firebase.firestore.FieldValue.serverTimestamp()
         }).then(() => {
           document.getElementById("semesterInput").value = "";
+          alert("Группа успешно назначена курсу");
         }).catch(error => {
           alert("Ошибка назначения группы: " + error.message);
         });
@@ -632,15 +675,26 @@ async function completeCourse() {
       return;
     }
 
-    const testIds = courseTestsSnap.docs.map(doc => doc.data().testId);
+    // ИСПРАВЛЕНИЕ: Используем Set для уникальных testId
+    const uniqueTestIds = new Set();
+    courseTestsSnap.forEach(doc => {
+      uniqueTestIds.add(doc.data().testId);
+    });
+    const testIds = Array.from(uniqueTestIds);
     
     const courseDoc = await db.collection("courses").doc(courseId).get();
     const courseName = courseDoc.data().name || 'Неизвестный курс';
     
-    for (const courseGroupDoc of courseGroupsSnap.docs) {
-      const groupData = courseGroupDoc.data();
-      const groupId = groupData.groupId;
-
+    // ИСПРАВЛЕНИЕ: Используем Map для уникальных групп
+    const uniqueGroupsMap = new Map();
+    courseGroupsSnap.forEach(doc => {
+      const groupData = doc.data();
+      if (!uniqueGroupsMap.has(groupData.groupId)) {
+        uniqueGroupsMap.set(groupData.groupId, groupData);
+      }
+    });
+    
+    for (const [groupId, groupData] of uniqueGroupsMap) {
       const groupDoc = await db.collection("groups").doc(groupId).get();
       const groupName = groupDoc.exists ? groupDoc.data().name : 'Неизвестная группа';
 
@@ -714,13 +768,13 @@ async function completeCourse() {
     });
 
     $('#completeCourseModal').modal('hide');
-    alert('✅ Курс успешно завершен. Студенты с неудовлетворительными оценками добавлены в список должников.');
+    alert('Курс успешно завершен. Студенты с неудовлетворительными оценками добавлены в список должников.');
     
     checkCourseStatus();
     
   } catch (error) {
     console.error("Ошибка завершения курса:", error);
-    alert('❌ Ошибка завершения курса: ' + error.message);
+    alert('Ошибка завершения курса: ' + error.message);
   } finally {
     confirmBtn.innerHTML = originalText;
     confirmBtn.disabled = false;
@@ -780,15 +834,54 @@ async function deleteCourse() {
     await db.collection("courses").doc(courseId).delete();
 
     $('#deleteCourseModal').modal('hide');
-    alert('✅ Курс успешно удален');
+    alert('Курс успешно удален');
     
     window.location.href = './courses.html';
     
   } catch (error) {
     console.error("Ошибка удаления курса:", error);
-    alert('❌ Ошибка удаления курса: ' + error.message);
+    alert('Ошибка удаления курса: ' + error.message);
   } finally {
     confirmBtn.innerHTML = originalText;
     confirmBtn.disabled = false;
+  }
+}
+
+// ВРЕМЕННАЯ ФУНКЦИЯ для очистки дубликатов (вызовите один раз в консоли)
+async function cleanupDuplicateTests() {
+  try {
+    // Получаем все записи test_course для этого курса
+    const snapshot = await db.collection("test_course")
+      .where("courseId", "==", courseId)
+      .get();
+    
+    const uniqueTests = new Map();
+    const duplicates = [];
+    
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const key = data.testId;
+      
+      if (uniqueTests.has(key)) {
+        duplicates.push(doc.id);
+        console.log('Найден дубликат:', doc.id, data);
+      } else {
+        uniqueTests.set(key, doc.id);
+      }
+    });
+    
+    console.log(`Найдено дубликатов: ${duplicates.length}`);
+    
+    // Удаляем дубликаты
+    for (const docId of duplicates) {
+      await db.collection("test_course").doc(docId).delete();
+      console.log('Удален дубликат:', docId);
+    }
+    
+    alert(`Очистка завершена. Удалено ${duplicates.length} дубликатов`);
+    
+  } catch (error) {
+    console.error("Ошибка очистки:", error);
+    alert("Ошибка: " + error.message);
   }
 }

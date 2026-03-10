@@ -6,30 +6,6 @@
   <title>Learn Remote - Успеваемость</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
   <link rel="stylesheet" href="./css/style.css">
-  <style>
-    .debug-info {
-      background: #f0f0f0;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 5px;
-      font-family: monospace;
-      font-size: 12px;
-      max-height: 200px;
-      overflow: auto;
-    }
-    .data-status {
-      position: fixed;
-      bottom: 10px;
-      right: 10px;
-      background: rgba(0,0,0,0.8);
-      color: white;
-      padding: 10px;
-      border-radius: 5px;
-      font-size: 12px;
-      z-index: 1000;
-      max-width: 300px;
-    }
-  </style>
 </head>
 <body>
   <nav class="navbar navbar-expand-md navbar-light bg-light fixed-top">
@@ -58,9 +34,6 @@
       <h1 id="groupNameTitle">Загрузка...</h1>
       <h4 id="courseNameTitle">Загрузка...</h4>
     </div>
-
-   
-    
     
     <div class="table-responsive">
       <table class="table table-bordered" id="performanceTable">
@@ -165,161 +138,6 @@
       window.location.href = './group-courses.html'; 
     }
 
-    function updateDebugInfo(data) {
-      const debugEl = document.getElementById('debugContent');
-      if (debugEl) {
-        debugEl.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
-      }
-    }
-
-    function showStatus(message, isError = false) {
-      const statusEl = document.getElementById('dataStatus');
-      const messageEl = document.getElementById('statusMessage');
-      if (statusEl && messageEl) {
-        messageEl.textContent = message;
-        statusEl.style.display = 'block';
-        statusEl.style.backgroundColor = isError ? 'rgba(220, 53, 69, 0.9)' : 'rgba(40, 167, 69, 0.9)';
-        setTimeout(() => {
-          statusEl.style.display = 'none';
-        }, 5000);
-      }
-    }
-
-    async function loadPerformanceData() {
-      console.log('=== НАЧАЛО ЗАГРУЗКИ ДАННЫХ УСПЕВАЕМОСТИ ===');
-      
-      const tbody = document.getElementById('performanceTableBody');
-      if (!tbody) return;
-      
-      tbody.innerHTML = '<tr><td colspan="100" class="text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Загрузка данных...</p></td></tr>';
-      
-      try {
-        const groupId = localStorage.getItem('currentGroupId');
-        const courseId = localStorage.getItem('currentCourseId');
-        
-        console.log('ID группы:', groupId);
-        console.log('ID курса:', courseId);
-        
-        if (!groupId || !courseId) {
-          throw new Error('Не найдены ID группы или курса в localStorage');
-        }
-
-        console.log('Запрос студентов группы...');
-        const groupSnapshot = await db.collection("usersgroup")
-          .where("groupId", "==", groupId)
-          .get();
-        
-        console.log('Найдено записей в usersgroup:', groupSnapshot.size);
-        
-        if (groupSnapshot.empty) { 
-          tbody.innerHTML = '<tr><td colspan="100" class="text-center text-muted">В группе нет студентов</td></tr>'; 
-          showStatus('В группе нет студентов', true);
-          return; 
-        }
-        
-        const studentIds = [];
-        groupSnapshot.forEach(doc => {
-          const data = doc.data();
-          console.log('Данные student:', data);
-          studentIds.push(data.userId);
-        });
-        
-        console.log('ID студентов:', studentIds);
-        
-        console.log('Запрос данных студентов...');
-        const studentDocs = await Promise.all(
-          studentIds.map(userId => db.collection("users").doc(userId).get())
-        );
-        
-        allStudents = [];
-        studentDocs.forEach((doc, index) => {
-          if (doc.exists) {
-            const userData = doc.data();
-            console.log('Данные пользователя:', doc.id, userData);
-            allStudents.push({ 
-              id: doc.id, 
-              name: userData.name || 'Неизвестный', 
-              surname: userData.surname || '' 
-            });
-          } else {
-            console.warn('Документ пользователя не найден:', studentIds[index]);
-          }
-        });
-        
-        console.log('Обработано студентов:', allStudents.length);
-        
-        console.log('Запрос тестов курса...');
-        const testCourseSnapshot = await db.collection("test_course")
-          .where("courseId", "==", courseId)
-          .get();
-        
-        console.log('Найдено записей test_course:', testCourseSnapshot.size);
-        
-        if (testCourseSnapshot.empty) { 
-          tbody.innerHTML = '<tr><td colspan="100" class="text-center text-muted">Нет тестов для этого курса</td></tr>'; 
-          showStatus('Нет тестов для этого курса', true);
-          return; 
-        }
-        
-        allTests = [];
-        for (const doc of testCourseSnapshot.docs) {
-          const data = doc.data();
-          console.log('Данные test_course:', data);
-          
-          const testDoc = await db.collection("tests").doc(data.testId).get();
-          if (testDoc.exists) {
-            const testData = testDoc.data();
-            console.log('Данные теста:', testDoc.id, testData);
-            allTests.push({ 
-              id: data.testId, 
-              name: testData.title || 'Без названия', 
-              num: testData.num || 0 
-            });
-          } else {
-            console.warn('Тест не найден:', data.testId);
-          }
-        }
-        
-        allTests.sort((a, b) => a.num - b.num);
-        console.log('Обработано тестов:', allTests.length);
-        
-    
-        console.log('Загрузка частей тестов...');
-        await loadTestParts();
-        console.log('Карта частей тестов:', Array.from(testPartsMap.entries()));
-        
-        console.log('Загрузка дедлайнов...');
-        const deadlinesMap = await loadDeadlines();
-        console.log('Карта дедлайнов:', Array.from(deadlinesMap.entries()));
-        
-        console.log('Загрузка оценок...');
-        const gradesMap = await loadTestGrades(studentIds);
-        console.log('Карта оценок:', Array.from(gradesMap.entries()));
-        
-        console.log('Построение таблицы...');
-        buildPerformanceTable(allStudents, allTests, gradesMap, deadlinesMap);
-        
-        populateForms();
-        
-        updateDebugInfo({
-          groupId,
-          courseId,
-          students: allStudents,
-          tests: allTests,
-          testParts: Array.from(testPartsMap.entries()),
-          deadlines: Array.from(deadlinesMap.entries()),
-          grades: Array.from(gradesMap.entries())
-        });
-        
-        
-        
-      } catch (error) {
-        console.error("ОШИБКА загрузки данных:", error);
-        tbody.innerHTML = `<tr><td colspan="100" class="text-center text-danger">Ошибка загрузки данных: ${error.message}</td></tr>`;
-        showStatus('Ошибка загрузки: ' + error.message, true);
-        updateDebugInfo({ error: error.message, stack: error.stack });
-      }
-    }
     document.addEventListener('DOMContentLoaded', function() {
       console.log('Страница course-performance.html загружена');
       
@@ -328,41 +146,10 @@
         return;
       }
 
-      const teacherNameEl = document.getElementById('teacherName');
-      if (teacherNameEl) {
-        const name = localStorage.getItem('teacherName') || '';
-        const surname = localStorage.getItem('teacherSurname') || '';
-        teacherNameEl.textContent = `${name} ${surname}`.trim();
-      }
-
-      const groupId = localStorage.getItem('currentGroupId');
-      const groupName = localStorage.getItem('currentGroupName');
-      const courseId = localStorage.getItem('currentCourseId');
-      const courseName = localStorage.getItem('currentCourseName');
-
-      console.log('Данные из localStorage:', {
-        groupId,
-        groupName,
-        courseId,
-        courseName
-      });
-
-      const groupTitle = document.getElementById('groupNameTitle');
-      const courseTitle = document.getElementById('courseNameTitle');
-      
-      if (groupTitle) groupTitle.textContent = groupName || 'Группа не выбрана';
-      if (courseTitle) courseTitle.textContent = courseName || 'Курс не выбран';
-
-      loadPerformanceData();
-
-      const deadlineForm = document.getElementById('deadlineForm');
-      if (deadlineForm) {
-        deadlineForm.addEventListener('submit', handleDeadlineSubmit);
-      }
-
-      const transferForm = document.getElementById('transferForm');
-      if (transferForm) {
-        transferForm.addEventListener('submit', handleTransferSubmit);
+      if (typeof initCoursePerformancePage === 'function') {
+        initCoursePerformancePage();
+      } else {
+        console.error('Функция initCoursePerformancePage не найдена');
       }
     });
   </script>

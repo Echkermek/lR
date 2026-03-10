@@ -74,104 +74,13 @@
         return;
       }
 
-      // Загружаем данные группы
-      const groupId = localStorage.getItem('currentGroupId');
-      const groupName = localStorage.getItem('currentGroupName');
-      
-      console.log('ID группы:', groupId);
-      console.log('Название группы:', groupName);
-      
-      if (!groupId || !groupName) {
-        console.error('Данные группы не найдены в localStorage');
-        window.location.href = './groups.html';
-        return;
+      // Функция initGroupCoursesPage уже определена в scripts.js
+      if (typeof initGroupCoursesPage === 'function') {
+        initGroupCoursesPage();
+      } else {
+        console.error('Функция initGroupCoursesPage не найдена');
       }
-      
-      document.getElementById('groupNameTitle').textContent = groupName;
-      
-      // Загружаем курсы группы
-      loadGroupCourses(groupId);
     });
-
-    // Загрузка курсов группы
-    async function loadGroupCourses(groupId) {
-      const coursesList = document.getElementById('coursesList');
-      
-      try {
-        console.log('Загрузка курсов для группы:', groupId);
-        
-        // Получаем курсы группы из коллекции course_groups
-        const courseGroupsSnapshot = await db.collection("course_groups")
-          .where("groupId", "==", groupId)
-          .get();
-
-        console.log('Найдено записей course_groups:', courseGroupsSnapshot.size);
-
-        if (courseGroupsSnapshot.empty) {
-          coursesList.innerHTML = '<p class="text-center text-muted">У этой группы нет курсов</p>';
-          return;
-        }
-
-        coursesList.innerHTML = '';
-        
-        for (const doc of courseGroupsSnapshot.docs) {
-          const data = doc.data();
-          const courseId = data.courseId;
-          const semester = data.semester || 'Не указан';
-          
-          console.log('Загрузка курса:', courseId);
-          
-          // Получаем информацию о курсе
-          const courseDoc = await db.collection("courses").doc(courseId).get();
-          
-          if (courseDoc.exists) {
-            const courseData = courseDoc.data();
-            const courseName = courseData.name || 'Без названия';
-            const isCompleted = courseData.completed || false;
-            
-            const courseItem = document.createElement('div');
-            courseItem.className = 'card mb-3 course-item';
-            courseItem.style.cursor = 'pointer';
-            courseItem.onclick = () => showCoursePerformance(courseId, courseName);
-            
-            courseItem.innerHTML = `
-              <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                    <h5 class="card-title mb-1">${courseName}</h5>
-                    <p class="card-text text-muted">
-                      <small>Семестр: ${semester}</small>
-                      ${isCompleted ? '<br><small class="text-secondary">Курс завершен</small>' : ''}
-                    </p>
-                  </div>
-                  <span class="badge badge-info">Подробнее →</span>
-                </div>
-              </div>
-            `;
-            
-            coursesList.appendChild(courseItem);
-          } else {
-            console.warn('Курс не найден:', courseId);
-          }
-        }
-        
-      } catch (error) {
-        console.error("Ошибка загрузки курсов:", error);
-        coursesList.innerHTML = `
-          <div class="alert alert-danger">
-            Ошибка загрузки курсов: ${error.message}
-          </div>
-        `;
-      }
-    }
-
-    // Переход к успеваемости по курсу
-    function showCoursePerformance(courseId, courseName) {
-      console.log('Переход к курсу:', courseName);
-      localStorage.setItem('currentCourseId', courseId);
-      localStorage.setItem('currentCourseName', courseName);
-      window.location.href = './course-performance.html';
-    }
   </script>
 </body>
 </html>
