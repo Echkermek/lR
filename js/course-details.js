@@ -142,9 +142,10 @@ function loadAllLectures() {
 }
 
 function loadAllTests() {
-  db.collection("tests").orderBy("semester").orderBy("num").onSnapshot(snap => {
-    const dropdownMenu = document.getElementById("testDropdownMenu");
+  const dropdownMenu = document.getElementById("testDropdownMenu");
+  dropdownMenu.innerHTML = '<div class="dropdown-item text-muted">Загрузка тестов...</div>';
 
+  db.collection("tests").onSnapshot(snap => {
     if (snap.empty) {
       dropdownMenu.innerHTML = '<div class="dropdown-item text-muted">Нет доступных тестов</div>';
       return;
@@ -160,10 +161,14 @@ function loadAllTests() {
 
     snap.forEach(doc => {
       const test = doc.data();
-      const testId = doc.id;
       const semester = Number(test.semester) || 1;
 
-      const item = { id: testId, ...test, semester };
+      const item = {
+        id: doc.id,
+        ...test,
+        semester
+      };
+
       testsData.push(item);
 
       if (!testsBySemester[semester]) {
@@ -171,6 +176,10 @@ function loadAllTests() {
       }
 
       testsBySemester[semester].push(item);
+    });
+
+    Object.keys(testsBySemester).forEach(semester => {
+      testsBySemester[semester].sort((a, b) => Number(a.num || 0) - Number(b.num || 0));
     });
 
     let html = `
@@ -182,21 +191,23 @@ function loadAllTests() {
     `;
 
     [1, 2, 3].forEach(semester => {
-      html += `<div class="test-semester-panel" id="testSemester${semester}" style="${semester === 1 ? '' : 'display:none;'}">`;
+      html += `
+        <div class="test-semester-panel" id="testSemester${semester}" style="${semester === 1 ? '' : 'display:none;'}">
+      `;
 
-      if (!testsBySemester[semester] || testsBySemester[semester].length === 0) {
+      if (testsBySemester[semester].length === 0) {
         html += `<div class="dropdown-item text-muted">Нет тестов за ${semester} семестр</div>`;
       } else {
         testsBySemester[semester].forEach(test => {
           html += `
             <label class="dropdown-item">
-              <input 
-                type="checkbox" 
-                class="test-checkbox" 
-                value="${test.id}" 
+              <input
+                type="checkbox"
+                class="test-checkbox"
+                value="${test.id}"
                 onchange="updateTestSelection('${test.id}', this.checked)"
               >
-              Тест ${test.num}: ${test.title}
+              Тест ${test.num || ''}: ${test.title || 'Без названия'}
             </label>
           `;
         });
@@ -206,7 +217,53 @@ function loadAllTests() {
     });
 
     dropdownMenu.innerHTML = html;
+
+  }, error => {
+    console.error("Ошибка загрузки тестов:", error);
+    dropdownMenu.innerHTML = `
+      <div class="dropdown-item text-danger">
+        Ошибка загрузки тестов: ${error.message}
+      </div>
+    `;
   });
+}
+
+function showTestSemester(semester, btn) {
+  document.querySelectorAll('.test-semester-panel').forEach(panel => {
+    panel.style.display = 'none';
+  });
+
+  const panel = document.getElementById(`testSemester${semester}`);
+  if (panel) {
+    panel.style.display = 'block';
+  }
+
+  document.querySelectorAll('.test-semester-tabs button').forEach(button => {
+    button.classList.remove('btn-info', 'active');
+    button.classList.add('btn-outline-info');
+  });
+
+  btn.classList.remove('btn-outline-info');
+  btn.classList.add('btn-info', 'active');
+}
+
+function showTestSemester(semester, btn) {
+  document.querySelectorAll('.test-semester-panel').forEach(panel => {
+    panel.style.display = 'none';
+  });
+
+  const activePanel = document.getElementById(`testSemester${semester}`);
+  if (activePanel) {
+    activePanel.style.display = 'block';
+  }
+
+  document.querySelectorAll('.test-semester-tabs button').forEach(button => {
+    button.classList.remove('btn-info', 'active');
+    button.classList.add('btn-outline-info');
+  });
+
+  btn.classList.remove('btn-outline-info');
+  btn.classList.add('btn-info', 'active');
 }
 
 function showTestSemester(semester, btn) {
