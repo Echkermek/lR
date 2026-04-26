@@ -142,34 +142,90 @@ function loadAllLectures() {
 }
 
 function loadAllTests() {
-  db.collection("tests").orderBy("num").onSnapshot(snap => {
+  db.collection("tests").orderBy("semester").orderBy("num").onSnapshot(snap => {
     const dropdownMenu = document.getElementById("testDropdownMenu");
-    
+
     if (snap.empty) {
       dropdownMenu.innerHTML = '<div class="dropdown-item text-muted">Нет доступных тестов</div>';
       return;
     }
-    
+
     testsData = [];
-    let html = '';
-    
+
+    const testsBySemester = {
+      1: [],
+      2: [],
+      3: []
+    };
+
     snap.forEach(doc => {
       const test = doc.data();
       const testId = doc.id;
-      testsData.push({ id: testId, ...test });
-      
-      html += `
-        <div class="dropdown-item d-flex align-items-center">
-          <input type="checkbox" class="custom-checkbox mr-2 test-checkbox" 
-                 data-test-id="${testId}" 
-                 onchange="updateTestSelection('${testId}', this.checked)">
-          <span>Тест ${test.num}: ${test.title}</span>
-        </div>
-      `;
+      const semester = Number(test.semester) || 1;
+
+      const item = { id: testId, ...test, semester };
+      testsData.push(item);
+
+      if (!testsBySemester[semester]) {
+        testsBySemester[semester] = [];
+      }
+
+      testsBySemester[semester].push(item);
     });
-    
+
+    let html = `
+      <div class="test-semester-tabs mb-2">
+        <button type="button" class="btn btn-sm btn-info active" onclick="showTestSemester(1, this)">1 семестр</button>
+        <button type="button" class="btn btn-sm btn-outline-info" onclick="showTestSemester(2, this)">2 семестр</button>
+        <button type="button" class="btn btn-sm btn-outline-info" onclick="showTestSemester(3, this)">3 семестр</button>
+      </div>
+    `;
+
+    [1, 2, 3].forEach(semester => {
+      html += `<div class="test-semester-panel" id="testSemester${semester}" style="${semester === 1 ? '' : 'display:none;'}">`;
+
+      if (!testsBySemester[semester] || testsBySemester[semester].length === 0) {
+        html += `<div class="dropdown-item text-muted">Нет тестов за ${semester} семестр</div>`;
+      } else {
+        testsBySemester[semester].forEach(test => {
+          html += `
+            <label class="dropdown-item">
+              <input 
+                type="checkbox" 
+                class="test-checkbox" 
+                value="${test.id}" 
+                onchange="updateTestSelection('${test.id}', this.checked)"
+              >
+              Тест ${test.num}: ${test.title}
+            </label>
+          `;
+        });
+      }
+
+      html += `</div>`;
+    });
+
     dropdownMenu.innerHTML = html;
   });
+}
+
+function showTestSemester(semester, btn) {
+  document.querySelectorAll('.test-semester-panel').forEach(panel => {
+    panel.style.display = 'none';
+  });
+
+  const activePanel = document.getElementById(`testSemester${semester}`);
+  if (activePanel) {
+    activePanel.style.display = 'block';
+  }
+
+  document.querySelectorAll('.test-semester-tabs button').forEach(button => {
+    button.classList.remove('btn-info', 'active');
+    button.classList.add('btn-outline-info');
+  });
+
+  btn.classList.remove('btn-outline-info');
+  btn.classList.add('btn-info', 'active');
 }
 
 function loadAssignedGroups() {
@@ -520,6 +576,8 @@ async function addSelectedLectures() {
 }
 
 async function addSelectedTests() {
+  console.log("Выбранные тесты для добавления:", Array.from(selectedTests));
+  
   if (selectedTests.size === 0) {
     alert('Выберите хотя бы один тест');
     return;
@@ -534,42 +592,67 @@ async function addSelectedTests() {
   const addBtn = document.getElementById('addTestsBtnText');
   const originalText = addBtn.innerHTML;
   addBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Добавление...';
+  addBtn.disabled = true;
 
   try {
-    const promises = [];
+    let addedCount = 0;
+    let skippedCount = 0;
     
     for (const testId of selectedTests) {
-      const existing = await db.collection("test_course")
+      console.log(`Обработка теста с ID: ${testId}`);
+      
+      // Проверяем, существует ли тест
+      const testDoc = await db.collection("tests").doc(testId).get();
+      if (!testDoc.exists) {
+        console.warn(`Тест с ID ${testId} не существует в коллекции tests`);
+        skippedCount++;
+        continue;
+      }
+      
+      console.log(`Тест найден: ${testDoc.data().title}`);
+      
+      // Проверяем, не привязан ли уже тест к курсу
+      const existingQuery = await db.collection("test_course")
         .where("courseId", "==", courseId)
         .where("testId", "==", testId)
         .get();
       
-      if (existing.empty) {
-        promises.push(
-          db.collection("test_course").add({
-            courseId: courseId,
-            testId: testId,
-            assignedAt: firebase.firestore.FieldValue.serverTimestamp()
-          })
-        );
+      if (existingQuery.empty) {
+        // Добавляем тест к курсу
+        await db.collection("test_course").add({
+          courseId: courseId,
+          testId: testId,
+          assignedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log(`Тест ${testId} успешно добавлен к курсу`);
+        addedCount++;
+      } else {
+        console.log(`Тест ${testId} уже привязан к курсу`);
+        skippedCount++;
       }
     }
 
-    await Promise.all(promises);
-    
+    // Очищаем выбранные чекбоксы
     document.querySelectorAll('.test-checkbox').forEach(cb => {
       cb.checked = false;
     });
     selectedTests.clear();
     updateSelectedTestsText();
     
-    alert(`Успешно добавлено ${promises.length} тестов`);
+    if (addedCount > 0) {
+      alert(`Успешно добавлено ${addedCount} тестов${skippedCount > 0 ? `, пропущено (уже добавлены): ${skippedCount}` : ''}`);
+    } else if (skippedCount > 0) {
+      alert(`Все выбранные тесты уже добавлены к курсу (${skippedCount} шт.)`);
+    } else {
+      alert("Не удалось добавить тесты. Проверьте консоль для деталей.");
+    }
     
   } catch (error) {
     console.error("Ошибка добавления тестов:", error);
     alert("Ошибка добавления тестов: " + error.message);
   } finally {
     addBtn.innerHTML = originalText;
+    addBtn.disabled = false;
   }
 }
 
