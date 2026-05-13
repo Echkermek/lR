@@ -355,24 +355,34 @@ async function renderCourses(courses, containerId, isCompleted) {
 
 function addCourse() {
   const nameInput = document.getElementById('newCourse');
+  const semesterSelect = document.getElementById('courseSemester');
   const messageDiv = document.getElementById('addCourseMessage');
   
   if (!nameInput) return;
   
   const name = nameInput.value.trim();
+  const semester = semesterSelect ? parseInt(semesterSelect.value) : null;
+  
   if (!name) {
     if (messageDiv) messageDiv.innerHTML = '<div class="alert alert-warning">Введите название курса</div>';
     return;
   }
   
-  console.log('Добавление курса:', name);
+  if (!semester) {
+    if (messageDiv) messageDiv.innerHTML = '<div class="alert alert-warning">Выберите семестр</div>';
+    return;
+  }
+  
+  console.log('Добавление курса:', name, 'Семестр:', semester);
   
   db.collection('courses').add({ 
-    name, 
+    name: name,
+    semester: semester,
     completed: false,
     createdAt: firebase.firestore.FieldValue.serverTimestamp() 
   }).then(() => {
     nameInput.value = '';
+    if (semesterSelect) semesterSelect.value = '1';
     if (messageDiv) messageDiv.innerHTML = '<div class="alert alert-success">Курс успешно добавлен</div>';
     setTimeout(() => {
       if (messageDiv) messageDiv.innerHTML = '';

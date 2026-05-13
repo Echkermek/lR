@@ -111,35 +111,110 @@ function loadAllGroups() {
 }
 
 function loadAllLectures() {
-  db.collection("lections").orderBy("num").onSnapshot(snap => {
-    const dropdownMenu = document.getElementById("lectureDropdownMenu");
-    
+  const dropdownMenu = document.getElementById("lectureDropdownMenu");
+  dropdownMenu.innerHTML = '<div class="dropdown-item text-muted">Загрузка лекций...</div>';
+
+  db.collection("lections").onSnapshot(snap => {
     if (snap.empty) {
       dropdownMenu.innerHTML = '<div class="dropdown-item text-muted">Нет доступных лекций</div>';
       return;
     }
-    
+
     lecturesData = [];
-    let html = '';
-    
+
+    const lecturesBySemester = {
+      1: [],
+      2: [],
+      3: []
+    };
+
     snap.forEach(doc => {
       const lecture = doc.data();
-      const lectureId = doc.id;
-      lecturesData.push({ id: lectureId, ...lecture });
-      
-      html += `
-        <div class="dropdown-item d-flex align-items-center">
-          <input type="checkbox" class="custom-checkbox mr-2 lecture-checkbox" 
-                 data-lecture-id="${lectureId}" 
-                 onchange="updateLectureSelection('${lectureId}', this.checked)">
-          <span>Лекция ${lecture.num}: ${lecture.name}</span>
-        </div>
-      `;
+      const sem = Number(lecture.sem) || 1;
+
+      const item = {
+        id: doc.id,
+        ...lecture,
+        sem
+      };
+
+      lecturesData.push(item);
+
+      if (!lecturesBySemester[sem]) {
+        lecturesBySemester[sem] = [];
+      }
+
+      lecturesBySemester[sem].push(item);
     });
-    
+
+    Object.keys(lecturesBySemester).forEach(sem => {
+      lecturesBySemester[sem].sort((a, b) => Number(a.num || 0) - Number(b.num || 0));
+    });
+
+    let html = `
+      <div class="lecture-semester-tabs mb-2">
+        <button type="button" class="btn btn-sm btn-info active" onclick="showLectureSemester(1, this)">1 семестр</button>
+        <button type="button" class="btn btn-sm btn-outline-info" onclick="showLectureSemester(2, this)">2 семестр</button>
+        <button type="button" class="btn btn-sm btn-outline-info" onclick="showLectureSemester(3, this)">3 семестр</button>
+      </div>
+    `;
+
+    [1, 2, 3].forEach(sem => {
+      html += `<div class="lecture-semester-panel" id="lectureSemester${sem}" style="${sem === 1 ? '' : 'display:none;'}">`;
+
+      if (lecturesBySemester[sem].length === 0) {
+        html += `<div class="dropdown-item text-muted">Нет лекций за ${sem} семестр</div>`;
+      } else {
+        lecturesBySemester[sem].forEach(lecture => {
+          html += `
+            <label class="dropdown-item">
+              <input 
+                type="checkbox"
+                class="lecture-checkbox"
+                value="${lecture.id}"
+                onchange="updateLectureSelection('${lecture.id}', this.checked)"
+              >
+              Лекция ${lecture.num || ''}: ${lecture.name || 'Без названия'}
+            </label>
+          `;
+        });
+      }
+
+      html += `</div>`;
+    });
+
     dropdownMenu.innerHTML = html;
+
+  }, error => {
+    console.error("Ошибка загрузки лекций:", error);
+    dropdownMenu.innerHTML = `
+      <div class="dropdown-item text-danger">
+        Ошибка загрузки лекций: ${error.message}
+      </div>
+    `;
   });
 }
+
+
+function showLectureSemester(semester, btn) {
+  document.querySelectorAll('.lecture-semester-panel').forEach(panel => {
+    panel.style.display = 'none';
+  });
+
+  const panel = document.getElementById(`lectureSemester${semester}`);
+  if (panel) {
+    panel.style.display = 'block';
+  }
+
+  document.querySelectorAll('.lecture-semester-tabs button').forEach(button => {
+    button.classList.remove('btn-info', 'active');
+    button.classList.add('btn-outline-info');
+  });
+
+  btn.classList.remove('btn-outline-info');
+  btn.classList.add('btn-info', 'active');
+}
+
 
 function loadAllTests() {
   const dropdownMenu = document.getElementById("testDropdownMenu");
@@ -286,6 +361,14 @@ function showTestSemester(semester, btn) {
 }
 
 function loadAssignedGroups() {
+  // Получаем семестр курса
+  let courseSemester = null;
+  db.collection("courses").doc(courseId).get().then(courseDoc => {
+    if (courseDoc.exists) {
+      courseSemester = courseDoc.data().semester;
+    }
+  });
+  
   db.collection("course_groups")
     .where("courseId", "==", courseId)
     .onSnapshot(snap => {
@@ -297,7 +380,7 @@ function loadAssignedGroups() {
         return;
       }
 
-      // ИСПРАВЛЕНИЕ: Используем Map для уникальных групп
+      // Используем Map для уникальных групп
       const uniqueGroupsMap = new Map();
       const courseGroups = [];
       
@@ -323,12 +406,14 @@ function loadAssignedGroups() {
           if (groupSnap.exists) {
             const groupData = groupSnap.data();
             const courseGroup = courseGroups[index];
+            // Используем семестр из courseGroup или из курса
+            const semesterToShow = courseGroup.semester || courseSemester || '?';
             
             const groupBadge = document.createElement("div");
             groupBadge.className = "assigned-group";
             groupBadge.innerHTML = `
               <strong>${groupData.name}</strong>
-              <small class="text-muted ml-2">Семестр: ${courseGroup.semester}</small>
+              <small class="text-muted ml-2">Семестр: ${semesterToShow}</small>
               <button class="btn btn-sm btn-outline-danger ml-2" onclick="removeGroupFromCourse('${courseGroup.id}')" id="removeGroup-${courseGroup.id}">×</button>
             `;
             assignedGroupsContainer.appendChild(groupBadge);
@@ -715,21 +800,23 @@ async function addSelectedTests() {
 
 function assignGroupToCourse() {
   const groupId = document.getElementById("groupSelect").value;
-  const semester = document.getElementById("semesterInput").value;
   
   if (!groupId) {
     alert("Выберите группу");
-    return;
-  }
-  
-  if (!semester) {
-    alert("Введите номер семестра");
     return;
   }
 
   db.collection("courses").doc(courseId).get().then(doc => {
     if (doc.exists && doc.data().completed === true) {
       alert('Нельзя добавлять группы в завершенный курс');
+      return;
+    }
+
+    // Получаем семестр курса
+    const courseSemester = doc.data().semester;
+    
+    if (!courseSemester) {
+      alert('У курса не указан семестр');
       return;
     }
 
@@ -740,17 +827,15 @@ function assignGroupToCourse() {
       .then(snap => {
         if (!snap.empty) {
           alert("Эта группа уже назначена данному курсу");
-          document.getElementById("semesterInput").value = "";
           return;
         }
 
         db.collection("course_groups").add({
           courseId: courseId,
           groupId: groupId,
-          semester: parseInt(semester),
+          semester: courseSemester,
           assignedAt: firebase.firestore.FieldValue.serverTimestamp()
         }).then(() => {
-          document.getElementById("semesterInput").value = "";
           alert("Группа успешно назначена курсу");
         }).catch(error => {
           alert("Ошибка назначения группы: " + error.message);
