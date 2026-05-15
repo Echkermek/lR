@@ -29,21 +29,30 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
       <button class="btn btn-secondary" onclick="history.back()">Назад к курсам</button>
       <div>
-        <button class="btn btn-danger complete-course-btn" onclick="confirmCompleteCourse()" id="completeCourseBtn">
-          Завершить курс
-        </button>
-        <button class="btn btn-outline-danger ml-2" onclick="confirmDeleteCourse()" id="deleteCourseBtn">
-          Удалить курс
-        </button>
+        <button class="btn btn-danger" onclick="confirmCompleteCourse()" id="completeCourseBtn">Завершить курс</button>
+        <button class="btn btn-outline-danger ml-2" onclick="confirmDeleteCourse()" id="deleteCourseBtn">Удалить курс</button>
       </div>
     </div>
     
     <h3 class="mb-4" id="courseName">
       Курс: Загрузка...
-      <span id="completedBadge" class="badge-completed" style="display: none;">Завершен</span>
+      <span id="completedBadge" style="display: none; font-size: 0.9rem; color: #28a745;">Завершен</span>
     </h3>
 
-    <div class="card mb-4 course-info-card" id="courseInfoCard">
+    <!-- Критерии оценок - минималистичный блок -->
+    <div class="card mb-3" style="border: 1px solid #ddd;">
+      <div class="card-header bg-light" style="padding: 8px 12px;">
+        <h6 class="mb-0">Критерии оценок</h6>
+      </div>
+      <div class="card-body" style="padding: 12px;">
+        <div id="gradesDisplay" style="font-size: 14px;">
+          <div>Загрузка...</div>
+        </div>
+        <button class="btn btn-link btn-sm pl-0" onclick="showEditGradesModal()" id="editGradesBtn" style="margin-top: 8px;">Изменить</button>
+      </div>
+    </div>
+
+    <div class="card mb-4" id="courseInfoCard">
       <div class="card-header bg-info text-white">
         <h5 class="mb-0">Информация о курсе</h5>
       </div>
@@ -61,45 +70,41 @@
             </div>
           </div>
           <div class="col-md-6">
-          <h6>Добавить группу к курсу:</h6>
-          <div class="form-row">
-            <div class="form-group col-md-8">
-              <label for="groupSelect">Выберите группу:</label>
-              <select id="groupSelect" class="form-control">
-                <option value="">Загрузка групп...</option>
-              </select>
-            </div>
-            <div class="form-group col-md-4 d-flex align-items-end">
-              <button class="btn btn-primary w-100" onclick="assignGroupToCourse()" id="assignGroupBtn">Добавить</button>
+            <h6>Добавить группу к курсу:</h6>
+            <div class="form-row">
+              <div class="form-group col-md-8">
+                <label for="groupSelect">Выберите группу:</label>
+                <select id="groupSelect" class="form-control">
+                  <option value="">Загрузка групп...</option>
+                </select>
+              </div>
+              <div class="form-group col-md-4 d-flex align-items-end">
+                <button class="btn btn-primary w-100" onclick="assignGroupToCourse()" id="assignGroupBtn">Добавить</button>
+              </div>
             </div>
           </div>
-        </div>
         </div>
       </div>
     </div>
 
     <ul class="nav nav-tabs" id="myTab" role="tablist">
       <li class="nav-item">
-        <a class="nav-link active" id="lectures-tab" data-toggle="tab" href="#lectures" role="tab" aria-controls="lectures" aria-selected="true">
-           Лекции
-        </a>
+        <a class="nav-link active" id="lectures-tab" data-toggle="tab" href="#lectures" role="tab">Лекции</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" id="tests-tab" data-toggle="tab" href="#tests" role="tab" aria-controls="tests" aria-selected="false">
-           Тесты
-        </a>
+        <a class="nav-link" id="tests-tab" data-toggle="tab" href="#tests" role="tab">Тесты</a>
       </li>
     </ul>
 
     <div class="tab-content" id="myTabContent">
-      <div class="tab-pane fade show active" id="lectures" role="tabpanel" aria-labelledby="lectures-tab">
-        <div class="card mb-3 add-item-card" id="addLecturesCard">
+      <div class="tab-pane fade show active" id="lectures" role="tabpanel">
+        <div class="card mb-3" id="addLecturesCard">
           <div class="card-body">
             <div class="form-row">
               <div class="form-group col-md-10">
                 <label>Выберите лекции:</label>
                 <div class="dropdown-checkbox">
-                  <button class="btn btn-light border dropdown-toggle" type="button" id="lectureDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  <button class="btn btn-light border dropdown-toggle" type="button" id="lectureDropdown" data-toggle="dropdown">
                     <span id="selectedLecturesText">Выберите лекции...</span>
                   </button>
                   <div class="dropdown-menu" aria-labelledby="lectureDropdown" id="lectureDropdownMenu">
@@ -111,14 +116,11 @@
                 </div>
               </div>
               <div class="form-group col-md-2 d-flex align-items-end">
-                <button class="btn btn-success w-100" onclick="addSelectedLectures()" id="addLecturesBtn">
-                  <span id="addLecturesBtnText">Добавить</span>
-                </button>
+                <button class="btn btn-success w-100" onclick="addSelectedLectures()" id="addLecturesBtn">Добавить</button>
               </div>
             </div>
           </div>
         </div>
-        
         <div id="lecturesContainer">
           <div class="text-center">
             <div class="spinner-border text-primary" role="status">
@@ -129,14 +131,14 @@
         </div>
       </div>
 
-      <div class="tab-pane fade" id="tests" role="tabpanel" aria-labelledby="tests-tab">
-        <div class="card mb-3 add-item-card" id="addTestsCard">
+      <div class="tab-pane fade" id="tests" role="tabpanel">
+        <div class="card mb-3" id="addTestsCard">
           <div class="card-body">
             <div class="form-row">
               <div class="form-group col-md-10">
                 <label>Выберите тесты:</label>
                 <div class="dropdown-checkbox">
-                  <button class="btn btn-light border dropdown-toggle" type="button" id="testDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  <button class="btn btn-light border dropdown-toggle" type="button" id="testDropdown" data-toggle="dropdown">
                     <span id="selectedTestsText">Выберите тесты...</span>
                   </button>
                   <div class="dropdown-menu" aria-labelledby="testDropdown" id="testDropdownMenu">
@@ -148,14 +150,11 @@
                 </div>
               </div>
               <div class="form-group col-md-2 d-flex align-items-end">
-                <button class="btn btn-success w-100" onclick="addSelectedTests()" id="addTestsBtn">
-                  <span id="addTestsBtnText"> Добавить</span>
-                </button>
+                <button class="btn btn-success w-100" onclick="addSelectedTests()" id="addTestsBtn">Добавить</button>
               </div>
             </div>
           </div>
         </div>
-        
         <div id="testsContainer">
           <div class="text-center">
             <div class="spinner-border text-primary" role="status">
@@ -168,6 +167,7 @@
     </div>
   </div>
 
+  <!-- Модальное окно для завершения курса -->
   <div class="modal fade" id="completeCourseModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
       <div class="modal-content">
@@ -186,14 +186,13 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-dismiss="modal">Отмена</button>
-          <button type="button" class="btn btn-primary" onclick="completeCourse()" id="confirmCompleteBtn">
-            Завершить курс
-          </button>
+          <button type="button" class="btn btn-primary" onclick="completeCourse()" id="confirmCompleteBtn">Завершить курс</button>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Модальное окно для удаления курса -->
   <div class="modal fade" id="deleteCourseModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
       <div class="modal-content">
@@ -202,7 +201,7 @@
           <button type="button" class="close" data-dismiss="modal">&times;</button>
         </div>
         <div class="modal-body">
-          <p class="text-primary"><strong>Вы уверены, что хотите удалить этот курс?</strong></p>
+          <p><strong>Вы уверены, что хотите удалить этот курс?</strong></p>
           <p>Это действие нельзя отменить. Будут удалены:</p>
           <ul>
             <li>Все связи курса с группами</li>
@@ -212,9 +211,44 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-dismiss="modal">Отмена</button>
-          <button type="button" class="btn btn-primary" onclick="deleteCourse()" id="confirmDeleteBtn">
-            Удалить курс
-          </button>
+          <button type="button" class="btn btn-primary" onclick="deleteCourse()" id="confirmDeleteBtn">Удалить курс</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно для изменения критериев оценок -->
+  <div class="modal fade" id="editGradesModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">Редактирование критериев оценок</h5>
+          <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>Установите минимальные баллы для получения оценок:</p>
+          <div class="form-group">
+            <label>Оценка 3 (удовлетворительно):</label>
+            <input type="number" id="editMin3" class="form-control" min="0" max="100" step="1">
+            <small class="form-text text-muted">Минимальный балл для получения "3"</small>
+          </div>
+          <div class="form-group">
+            <label>Оценка 4 (хорошо):</label>
+            <input type="number" id="editMin4" class="form-control" min="0" max="100" step="1">
+            <small class="form-text text-muted">Минимальный балл для получения "4"</small>
+          </div>
+          <div class="form-group">
+            <label>Оценка 5 (отлично):</label>
+            <input type="number" id="editMin5" class="form-control" min="0" max="100" step="1">
+            <small class="form-text text-muted">Минимальный балл для получения "5"</small>
+          </div>
+          <div class="alert alert-info mt-2">
+            <small>Оценки ниже min3 считаются неудовлетворительными. Значения: min3 < min4 < min5.</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Отмена</button>
+          <button type="button" class="btn btn-primary" onclick="updateCourseGrades()" id="saveGradesBtn">Сохранить</button>
         </div>
       </div>
     </div>
@@ -226,5 +260,149 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
   <script src="./js/course-details.js"></script>
+  <script>
+    let currentGradesData = null;
+
+    function loadCourseGrades() {
+      const gradesDisplay = document.getElementById('gradesDisplay');
+      
+      db.collection("course_grades").doc(courseId).get()
+        .then(doc => {
+          if (doc.exists) {
+            currentGradesData = doc.data();
+            const min3 = currentGradesData.min3 || 50;
+            const min4 = currentGradesData.min4 || 66;
+            const min5 = currentGradesData.min5 || 77;
+            
+            gradesDisplay.innerHTML = `
+              <div>Оценка 3: минимум ${min3} баллов</div>
+              <div>Оценка 4: минимум ${min4} баллов</div>
+              <div>Оценка 5: минимум ${min5} баллов</div>
+            `;
+          } else {
+            gradesDisplay.innerHTML = '<div class="text-muted">Критерии не установлены</div>';
+          }
+        })
+        .catch(error => {
+          console.error("Ошибка загрузки критериев:", error);
+          gradesDisplay.innerHTML = '<div class="text-danger">Ошибка загрузки</div>';
+        });
+    }
+
+    function showEditGradesModal() {
+      db.collection("courses").doc(courseId).get().then(courseDoc => {
+        if (courseDoc.exists && courseDoc.data().completed === true) {
+          alert('Нельзя изменять критерии завершенного курса');
+          return;
+        }
+        
+        db.collection("course_grades").doc(courseId).get()
+          .then(doc => {
+            if (doc.exists) {
+              document.getElementById('editMin3').value = doc.data().min3 || 50;
+              document.getElementById('editMin4').value = doc.data().min4 || 66;
+              document.getElementById('editMin5').value = doc.data().min5 || 77;
+            } else {
+              document.getElementById('editMin3').value = 50;
+              document.getElementById('editMin4').value = 66;
+              document.getElementById('editMin5').value = 77;
+            }
+            $('#editGradesModal').modal('show');
+          })
+          .catch(error => {
+            alert('Ошибка загрузки критериев: ' + error.message);
+          });
+      });
+    }
+
+    async function updateCourseGrades() {
+      const min3 = parseInt(document.getElementById('editMin3').value);
+      const min4 = parseInt(document.getElementById('editMin4').value);
+      const min5 = parseInt(document.getElementById('editMin5').value);
+      
+      if (isNaN(min3) || isNaN(min4) || isNaN(min5)) {
+        alert('Введите корректные числовые значения');
+        return;
+      }
+      
+      if (min3 < 0 || min3 > 100 || min4 < 0 || min4 > 100 || min5 < 0 || min5 > 100) {
+        alert('Значения должны быть от 0 до 100');
+        return;
+      }
+      
+      if (min3 >= min4 || min4 >= min5) {
+        alert('Значения должны быть в порядке возрастания: min3 < min4 < min5');
+        return;
+      }
+      
+      const saveBtn = document.getElementById('saveGradesBtn');
+      const originalText = saveBtn.innerHTML;
+      saveBtn.innerHTML = 'Сохранение...';
+      saveBtn.disabled = true;
+      
+      try {
+        await db.collection("course_grades").doc(courseId).set({
+          courseid: courseId,
+          min3: min3,
+          min4: min4,
+          min5: min5,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        
+        $('#editGradesModal').modal('hide');
+        alert('Критерии сохранены');
+        loadCourseGrades();
+        
+      } catch (error) {
+        console.error("Ошибка сохранения:", error);
+        alert('Ошибка: ' + error.message);
+      } finally {
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+      }
+    }
+
+    // Блокировка кнопки редактирования для завершенного курса
+    const originalCheckCourseStatus = checkCourseStatus;
+    window.checkCourseStatus = function() {
+      originalCheckCourseStatus();
+      
+      db.collection("courses").doc(courseId).onSnapshot(doc => {
+        if (doc.exists) {
+          const isCompleted = doc.data().completed === true;
+          const editGradesBtn = document.getElementById('editGradesBtn');
+          if (editGradesBtn) {
+            editGradesBtn.disabled = isCompleted;
+            if (isCompleted) editGradesBtn.style.opacity = '0.5';
+            else editGradesBtn.style.opacity = '1';
+          }
+        }
+      });
+    };
+    
+    const originalCompleteCourse = completeCourse;
+    window.completeCourse = async function() {
+      const gradesDoc = await db.collection("course_grades").doc(courseId).get();
+      if (!gradesDoc.exists) {
+        if (!confirm('Критерии оценок не установлены. Использовать стандартные: 3=50, 4=66, 5=77?')) {
+          return;
+        }
+      }
+      await originalCompleteCourse();
+    };
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      loadCourseGrades();
+      if (typeof originalCheckCourseStatus === 'function') {
+        checkCourseStatus();
+      }
+      loadAssignedGroups();
+      loadCourseTests();
+      loadCourseLectures();
+      loadAllGroups();
+      loadAllLectures();
+      loadAllTests();
+    });
+  </script>
 </body>
 </html>

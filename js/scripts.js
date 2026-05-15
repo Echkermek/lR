@@ -375,15 +375,63 @@ function addCourse() {
   
   console.log('Добавление курса:', name, 'Семестр:', semester);
   
+  // Определяем критерии оценок в зависимости от семестра
+  let min3, min4, min5;
+  
+  switch(semester) {
+    case 1:
+      // 1 семестр: 3-76, 4-90, 5-106
+      min3 = 76;
+      min4 = 90;
+      min5 = 106;
+      break;
+    case 2:
+      // 2 семестр: 3-98, 4-112, 5-128
+      min3 = 98;
+      min4 = 112;
+      min5 = 128;
+      break;
+    case 3:
+      // 3 семестр: 3-43, 4-57, 5-73
+      min3 = 43;
+      min4 = 57;
+      min5 = 73;
+      break;
+    default:
+      // Значения по умолчанию
+      min3 = 50;
+      min4 = 66;
+      min5 = 77;
+  }
+  
+  console.log('Установлены критерии оценок:', { min3, min4, min5 });
+  
+  // Сначала создаем курс
   db.collection('courses').add({ 
     name: name,
     semester: semester,
     completed: false,
     createdAt: firebase.firestore.FieldValue.serverTimestamp() 
+  }).then((courseRef) => {
+    const courseId = courseRef.id;
+    console.log('Курс создан с ID:', courseId);
+    
+    // После создания курса, добавляем критерии оценок в course_grades
+    return db.collection('course_grades').doc(courseId).set({
+      courseid: courseId,
+      min3: min3,
+      min4: min4,
+      min5: min5,
+      semester: semester,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(() => {
+      console.log('Критерии оценок добавлены для курса:', courseId);
+      return courseRef;
+    });
   }).then(() => {
     nameInput.value = '';
     if (semesterSelect) semesterSelect.value = '1';
-    if (messageDiv) messageDiv.innerHTML = '<div class="alert alert-success">Курс успешно добавлен</div>';
+    if (messageDiv) messageDiv.innerHTML = '<div class="alert alert-success">Курс успешно добавлен с критериями оценок</div>';
     setTimeout(() => {
       if (messageDiv) messageDiv.innerHTML = '';
     }, 3000);
