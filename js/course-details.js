@@ -34,6 +34,7 @@ let testsData = [];
 
 document.addEventListener('DOMContentLoaded', function() {
   console.log('DOM загружен, courseId:', courseId);
+  loadCourseGrades();
   checkCourseStatus();
   loadAssignedGroups();
   loadCourseTests();
@@ -673,15 +674,14 @@ async function addSelectedLectures() {
     return;
   }
 
-  const addBtn = document.getElementById('addLecturesBtnText');
-  if (!addBtn) return;
-  
+  // ИСПРАВЛЕНО: правильный ID элемента
+  const addBtn = document.getElementById('addLecturesBtn');
   const originalText = addBtn.innerHTML;
-  addBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Добавление...';
+  addBtn.innerHTML = 'Добавление...';
+  addBtn.disabled = true;
 
   try {
-    const promises = [];
-    
+    let addedCount = 0;
     for (const lectureId of selectedLectures) {
       const existing = await db.collection("lecture_course")
         .where("courseId", "==", courseId)
@@ -689,17 +689,14 @@ async function addSelectedLectures() {
         .get();
       
       if (existing.empty) {
-        promises.push(
-          db.collection("lecture_course").add({
-            courseId: courseId,
-            lectureId: lectureId,
-            assignedAt: firebase.firestore.FieldValue.serverTimestamp()
-          })
-        );
+        await db.collection("lecture_course").add({
+          courseId: courseId,
+          lectureId: lectureId,
+          assignedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        addedCount++;
       }
     }
-
-    await Promise.all(promises);
     
     document.querySelectorAll('.lecture-checkbox').forEach(cb => {
       cb.checked = false;
@@ -707,13 +704,67 @@ async function addSelectedLectures() {
     selectedLectures.clear();
     updateSelectedLecturesText();
     
-    alert(`Успешно добавлено ${promises.length} лекций`);
+    alert(`Успешно добавлено ${addedCount} лекций`);
     
   } catch (error) {
     console.error("Ошибка добавления лекций:", error);
     alert("Ошибка добавления лекций: " + error.message);
   } finally {
     addBtn.innerHTML = originalText;
+    addBtn.disabled = false;
+  }
+}
+
+async function addSelectedTests() {
+  if (selectedTests.size === 0) {
+    alert('Выберите хотя бы один тест');
+    return;
+  }
+
+  const courseDoc = await db.collection("courses").doc(courseId).get();
+  if (courseDoc.exists && courseDoc.data().completed === true) {
+    alert('Нельзя добавлять тесты в завершенный курс');
+    return;
+  }
+
+  // ИСПРАВЛЕНО: правильный ID элемента
+  const addBtn = document.getElementById('addTestsBtn');
+  const originalText = addBtn.innerHTML;
+  addBtn.innerHTML = 'Добавление...';
+  addBtn.disabled = true;
+
+  try {
+    let addedCount = 0;
+    for (const testId of selectedTests) {
+      const existingQuery = await db.collection("test_course")
+        .where("courseId", "==", courseId)
+        .where("testId", "==", testId)
+        .get();
+      
+      if (existingQuery.empty) {
+        await db.collection("test_course").add({
+          courseId: courseId,
+          testId: testId,
+          assignedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        addedCount++;
+      }
+    }
+    
+    document.querySelectorAll('.test-checkbox').forEach(cb => {
+      cb.checked = false;
+    });
+    selectedTests.clear();
+    updateSelectedTestsText();
+    
+    alert(`Успешно добавлено ${addedCount} тестов`);
+    
+  } catch (error) {
+    console.error("Ошибка добавления тестов:", error);
+    alert("Ошибка добавления тестов: " + error.message);
+  } finally {
+    addBtn.innerHTML = originalText;
+    addBtn.disabled = false;
   }
 }
 
@@ -731,7 +782,7 @@ async function addSelectedTests() {
     return;
   }
 
-  const addBtn = document.getElementById('addTestsBtnText');
+  const addBtn = document.getElementById('addTestsBtn');
   if (!addBtn) return;
   
   const originalText = addBtn.innerHTML;
@@ -1118,5 +1169,108 @@ async function cleanupDuplicateTests() {
   } catch (error) {
     console.error("Ошибка очистки:", error);
     alert("Ошибка: " + error.message);
+  }
+
+  
+}
+
+// ========== ФУНКЦИИ ДЛЯ КРИТЕРИЕВ ОЦЕНОК ==========
+
+function loadCourseGrades() {
+  const gradesDisplay = document.getElementById('gradesDisplay');
+  if (!gradesDisplay) return;
+  
+  db.collection("course_grades").doc(courseId).get()
+    .then(doc => {
+      if (doc.exists) {
+        const min3 = doc.data().min3 || 50;
+        const min4 = doc.data().min4 || 66;
+        const min5 = doc.data().min5 || 77;
+        
+        gradesDisplay.innerHTML = `
+          <div>Оценка 3: минимум ${min3} баллов</div>
+          <div>Оценка 4: минимум ${min4} баллов</div>
+          <div>Оценка 5: минимум ${min5} баллов</div>
+        `;
+      } else {
+        gradesDisplay.innerHTML = '<div class="text-muted">Критерии не установлены</div>';
+      }
+    })
+    .catch(error => {
+      console.error("Ошибка загрузки критериев:", error);
+      gradesDisplay.innerHTML = '<div class="text-danger">Ошибка загрузки</div>';
+    });
+}
+
+function showEditGradesModal() {
+  db.collection("courses").doc(courseId).get().then(courseDoc => {
+    if (courseDoc.exists && courseDoc.data().completed === true) {
+      alert('Нельзя изменять критерии завершенного курса');
+      return;
+    }
+    
+    db.collection("course_grades").doc(courseId).get()
+      .then(doc => {
+        if (doc.exists) {
+          document.getElementById('editMin3').value = doc.data().min3 || 50;
+          document.getElementById('editMin4').value = doc.data().min4 || 66;
+          document.getElementById('editMin5').value = doc.data().min5 || 77;
+        } else {
+          document.getElementById('editMin3').value = 50;
+          document.getElementById('editMin4').value = 66;
+          document.getElementById('editMin5').value = 77;
+        }
+        $('#editGradesModal').modal('show');
+      })
+      .catch(error => {
+        alert('Ошибка загрузки критериев: ' + error.message);
+      });
+  });
+}
+
+async function updateCourseGrades() {
+  const min3 = parseInt(document.getElementById('editMin3').value);
+  const min4 = parseInt(document.getElementById('editMin4').value);
+  const min5 = parseInt(document.getElementById('editMin5').value);
+  
+  if (isNaN(min3) || isNaN(min4) || isNaN(min5)) {
+    alert('Введите корректные числовые значения');
+    return;
+  }
+  
+  if (min3 < 0 || min4 < 0 || min5 < 0) {
+    alert('Значения не могут быть отрицательными');
+    return;
+  }
+  
+  if (min3 >= min4 || min4 >= min5) {
+    alert('Значения должны быть в порядке возрастания: min3 < min4 < min5');
+    return;
+  }
+  
+  const saveBtn = document.getElementById('saveGradesBtn');
+  const originalText = saveBtn.innerHTML;
+  saveBtn.innerHTML = 'Сохранение...';
+  saveBtn.disabled = true;
+  
+  try {
+    await db.collection("course_grades").doc(courseId).set({
+      courseid: courseId,
+      min3: min3,
+      min4: min4,
+      min5: min5,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    
+    $('#editGradesModal').modal('hide');
+    alert('Критерии сохранены');
+    loadCourseGrades();
+    
+  } catch (error) {
+    console.error("Ошибка сохранения:", error);
+    alert('Ошибка: ' + error.message);
+  } finally {
+    saveBtn.innerHTML = originalText;
+    saveBtn.disabled = false;
   }
 }
