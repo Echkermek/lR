@@ -703,6 +703,63 @@ let allTests = [];
 let allStudents = [];
 let testPartsMap = new Map();
 let resetData = {};
+let courseGrades = null;
+
+
+async function loadCourseGrades() {
+  try {
+    const gradesDoc = await db.collection("course_grades").doc(currentCourseId).get();
+    if (gradesDoc.exists) {
+      courseGrades = gradesDoc.data();
+      console.log("Course grades loaded:", courseGrades);
+    } else {
+      // Значения по умолчанию, если критерии не установлены
+      courseGrades = { min3: 50, min4: 66, min5: 77 };
+      console.log("Using default grades:", courseGrades);
+    }
+  } catch (error) {
+    console.error("Error loading course grades:", error);
+    courseGrades = { min3: 50, min4: 66, min5: 77 };
+  }
+}
+
+
+async function getStudentTotalScore(studentId) {
+  try {
+    const docId = `${studentId}_${currentCourseId}`;
+    const scoreDoc = await db.collection("student_course_scores").doc(docId).get();
+    
+    if (scoreDoc.exists) {
+      return scoreDoc.data().totalScore || 0;
+    }
+    return 0;
+  } catch (error) {
+    console.error(`Error getting totalScore for ${studentId}:`, error);
+    return 0;
+  }
+}
+
+
+function getGradeFromTotalScore(totalScore) {
+  if (!courseGrades) {
+    return { text: 'неуд', class: 'bg-unsatisfactory' };
+  }
+  
+  const min3 = courseGrades.min3 || 50;
+  const min4 = courseGrades.min4 || 66;
+  const min5 = courseGrades.min5 || 77;
+  
+  if (totalScore >= min5) {
+    return { text: 'отл', class: 'bg-excellent' };
+  } else if (totalScore >= min4) {
+    return { text: 'хор', class: 'bg-good' };
+  } else if (totalScore >= min3) {
+    return { text: 'удовл', class: 'bg-satisfactory' };
+  } else {
+    return { text: 'неуд', class: 'bg-unsatisfactory' };
+  }
+}
+
 
 function initCoursePerformancePage() {
   console.log('Инициализация страницы успеваемости');
@@ -760,6 +817,104 @@ function initCoursePerformancePage() {
     transferForm.addEventListener('submit', handleTransferSubmit);
   }
 }
+
+async function loadPerformanceData() {
+  const tbody = document.getElementById('performanceTableBody');
+  if (!tbody) return;
+  
+  tbody.innerHTML = '<tr><td colspan="100" class="text-center">Загрузка...</td></tr>';
+  
+  try {
+    // 1. Загружаем критерии оценок курса
+    await loadCourseGrades();
+    console.log('Критерии оценок загружены:', courseGrades);
+    
+    // 2. Получаем студентов группы
+    const groupSnapshot = await db.collection("usersgroup")
+      .where("groupId", "==", currentGroupId)
+      .get();
+    
+    if (groupSnapshot.empty) { 
+      tbody.innerHTML = '<tr><td colspan="100" class="text-center text-muted">В группе нет студентов</td></tr>'; 
+      return; 
+    }
+    
+    const studentIds = [];
+    groupSnapshot.forEach(doc => {
+      const data = doc.data();
+      studentIds.push(data.userId);
+    });
+    
+    // 3. Загружаем информацию о студентах и их totalScore
+    const studentDocs = await Promise.all(
+      studentIds.map(userId => db.collection("users").doc(userId).get())
+    );
+    
+    const studentScoresPromises = studentIds.map(userId => getStudentTotalScore(userId));
+    const studentScores = await Promise.all(studentScoresPromises);
+    
+    allStudents = [];
+    studentDocs.forEach((doc, index) => {
+      if (doc.exists) {
+        const userData = doc.data();
+        allStudents.push({ 
+          id: doc.id, 
+          name: userData.name || 'Неизвестный', 
+          surname: userData.surname || '',
+          totalScore: studentScores[index] || 0
+        });
+      }
+    });
+    
+    console.log('Студенты с totalScore:', allStudents.map(s => ({ name: s.name, totalScore: s.totalScore })));
+    
+    // 4. Запрос тестов курса (уникальные)
+    const testCourseSnapshot = await db.collection("test_course")
+      .where("courseId", "==", currentCourseId)
+      .get();
+    
+    if (testCourseSnapshot.empty) { 
+      tbody.innerHTML = '<tr><td colspan="100" class="text-center text-muted">Нет тестов для этого курса</td></tr>'; 
+      return; 
+    }
+    
+    // Используем Map для уникальных тестов
+    const uniqueTestsMap = new Map();
+    
+    for (const doc of testCourseSnapshot.docs) {
+      const data = doc.data();
+      const testId = data.testId;
+      
+      if (!uniqueTestsMap.has(testId)) {
+        const testDoc = await db.collection("tests").doc(testId).get();
+        if (testDoc.exists) {
+          const testData = testDoc.data();
+          uniqueTestsMap.set(testId, { 
+            id: testId, 
+            name: testData.title || 'Без названия', 
+            num: testData.num || 0 
+          });
+        }
+      }
+    }
+    
+    allTests = Array.from(uniqueTestsMap.values()).sort((a, b) => a.num - b.num);
+    console.log('Загружено уникальных тестов:', allTests.length);
+    
+    await loadTestParts();
+    const deadlinesMap = await loadDeadlinesForGroup(currentGroupId);
+    const gradesMap = await loadTestGrades(studentIds);
+    
+    // Передаем allStudents с totalScore в buildPerformanceTable
+    buildPerformanceTable(allStudents, allTests, gradesMap, deadlinesMap);
+    populateForms();
+    
+  } catch (error) {
+    console.error("Ошибка загрузки данных:", error);
+    tbody.innerHTML = '<tr><td colspan="100" class="text-center text-danger">Ошибка загрузки данных</td></tr>';
+  }
+}
+
 
 async function loadPerformanceData() {
   const tbody = document.getElementById('performanceTableBody');
@@ -971,6 +1126,7 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
   }
   
   console.log('buildPerformanceTable - deadlinesMap:', Array.from(deadlinesMap.entries()));
+  console.log('Критерии оценок для отображения:', courseGrades);
   
   // Проверяем, есть ли у тестов части
   let hasParts = false;
@@ -985,16 +1141,15 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
   let headerHTML = '<tr>';
   
   if (hasParts) {
-    // Если есть части, показываем их
     headerHTML += '<th rowspan="3" style="min-width: 200px;">Студент</th>';
     
     tests.forEach(test => {
       const parts = testPartsMap.get(test.id) || [];
-      // Если у теста нет частей, показываем одну колонку
       const colSpan = parts.length > 0 ? parts.length : 1;
       headerHTML += `<th colspan="${colSpan}">${test.name}</th>`;
     });
     
+    headerHTML += '<th rowspan="3" style="min-width: 120px;">Общий балл</th>';
     headerHTML += '<th rowspan="3" style="min-width: 100px;">Оценка</th>';
     headerHTML += '</tr>';
     
@@ -1005,7 +1160,6 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
       const colSpan = parts.length > 0 ? parts.length : 1;
       const deadline = deadlinesMap.get(test.id);
       const deadlineText = deadline ? deadline : 'Нет срока';
-      console.log(`Тест ${test.name} (${test.id}) дедлайн:`, deadline, 'текст:', deadlineText);
       headerHTML += `<th colspan="${colSpan}" title="Срок сдачи: ${deadlineText}">${deadlineText}</th>`;
     });
     headerHTML += '</tr>';
@@ -1024,15 +1178,14 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
     });
     headerHTML += '</tr>';
   } else {
-    // Если у тестов нет частей, показываем простую таблицу
     headerHTML += '<th>Студент</th>';
     tests.forEach(test => {
       headerHTML += `<th>${test.name}</th>`;
     });
+    headerHTML += '<th>Общий балл</th>';
     headerHTML += '<th>Оценка</th>';
     headerHTML += '</tr>';
     
-    // Добавляем строку с дедлайнами
     headerHTML += '<tr class="deadline-row">';
     headerHTML += '<th></th>';
     tests.forEach(test => {
@@ -1041,18 +1194,20 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
       headerHTML += `<th title="Срок сдачи: ${deadlineText}">${deadlineText}</th>`;
     });
     headerHTML += '<th></th>';
+    headerHTML += '<th></th>';
     headerHTML += '</tr>';
   }
   
   header.innerHTML = headerHTML;
   
-  // Построение тела таблицы (остальная часть функции без изменений)
+  // Построение тела таблицы
   let tableHTML = '';
+  const min3 = courseGrades?.min3 || 50;
+  const min4 = courseGrades?.min4 || 66;
+  const min5 = courseGrades?.min5 || 77;
   
   students.forEach(student => {
     let row = `<tr><td class="student-name" title="${student.name} ${student.surname}">${student.name} ${student.surname}</td>`;
-    let totalScore = 0;
-    let testsTaken = 0;
     
     tests.forEach(test => {
       const parts = testPartsMap.get(test.id) || [];
@@ -1060,11 +1215,8 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
       const grade = gradesMap.get(key);
       
       if (hasParts && parts.length > 0) {
-        // Если есть части, показываем оценку в каждой части
         parts.forEach((part) => {
           if (grade) { 
-            totalScore += grade.score; 
-            testsTaken++; 
             row += `<td onclick="showResetModal('${student.id}', '${student.name} ${student.surname}', '${test.id}', '${test.name}', '${part.name}', ${grade.score}, '${grade.docId}')" 
                       title="Тест: ${test.name}
 Часть: ${part.name}
@@ -1078,10 +1230,7 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
           }
         });
       } else {
-        // Если нет частей, показываем одну колонку для теста
         if (grade) { 
-          totalScore += grade.score; 
-          testsTaken++; 
           row += `<td onclick="showResetModal('${student.id}', '${student.name} ${student.surname}', '${test.id}', '${test.name}', 'Тест', ${grade.score}, '${grade.docId}')" 
                     title="Тест: ${test.name}
 Баллы: ${grade.score}
@@ -1094,24 +1243,18 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
       }
     });
     
-    const avg = tests.length ? (totalScore / tests.length).toFixed(1) : '0.0';
-    let gradeClass = 'bg-unsatisfactory';
-    let gradeText = 'неуд';
-    const avgNum = parseFloat(avg);
+    // Используем totalScore из student_course_scores (уже загружен в student.totalScore)
+    const totalScore = student.totalScore || 0;
+    const gradeInfo = getGradeFromTotalScore(totalScore);
     
-    if (avgNum >= 85) { 
-      gradeClass = 'bg-excellent'; 
-      gradeText = 'отл'; 
-    } else if (avgNum >= 70) { 
-      gradeClass = 'bg-good'; 
-      gradeText = 'хор'; 
-    } else if (avgNum >= 60) { 
-      gradeClass = 'bg-satisfactory'; 
-      gradeText = 'удовл'; 
-    }
-    
-    row += `<td class="${gradeClass}" title="Средний балл: ${avg}
-Сдано тестов: ${testsTaken} из ${tests.length}">${gradeText}</td>`;
+    row += `<td class="total-score-cell" title="Общий балл за курс: ${totalScore.toFixed(1)}
+Порог для 3: ${min3}
+Порог для 4: ${min4}
+Порог для 5: ${min5}">${totalScore.toFixed(1)}</td>`;
+    row += `<td class="${gradeInfo.class}" title="Общий балл: ${totalScore.toFixed(1)}
+Порог для 3: ${min3}
+Порог для 4: ${min4}
+Порог для 5: ${min5}">${gradeInfo.text}</td>`;
     row += '</tr>';
     tableHTML += row;
   });
