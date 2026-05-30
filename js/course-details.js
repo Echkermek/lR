@@ -924,44 +924,40 @@ async function completeCourse() {
   confirmBtn.disabled = true;
 
   try {
+    // 1. Проверяем, есть ли группы у курса
     const courseGroupsSnap = await db.collection("course_groups")
       .where("courseId", "==", courseId)
       .get();
 
     if (courseGroupsSnap.empty) {
       alert('К курсу не привязаны группы');
+      confirmBtn.innerHTML = originalText;
+      confirmBtn.disabled = false;
       return;
     }
 
-    const courseTestsSnap = await db.collection("test_course")
-      .where("courseId", "==", courseId)
-      .get();
-
-    if (courseTestsSnap.empty) {
-      alert('К курсу не привязаны тесты');
-      return;
-    }
-
-    let gradesConfig = { min3: 50, min4: 66, min5: 77 };
+    // 2. Загружаем критерии оценок для этого курса
+    let min3 = 50; // значения по умолчанию
+    let min4 = 66;
+    let min5 = 77;
+    
     try {
       const gradesDoc = await db.collection("course_grades").doc(courseId).get();
       if (gradesDoc.exists) {
-        gradesConfig = gradesDoc.data();
+        min3 = gradesDoc.data().min3 || 50;
+        min4 = gradesDoc.data().min4 || 66;
+        min5 = gradesDoc.data().min5 || 77;
       }
     } catch (error) {
       console.warn('Не удалось загрузить критерии оценок:', error);
     }
 
-    const uniqueTestIds = new Set();
-    courseTestsSnap.forEach(doc => {
-      uniqueTestIds.add(doc.data().testId);
-    });
-    const testIds = Array.from(uniqueTestIds);
-    
+    // 3. Получаем информацию о курсе
     const courseDoc = await db.collection("courses").doc(courseId).get();
     const courseName = courseDoc.data().name || 'Неизвестный курс';
     const courseSemester = courseDoc.data().semester;
-    
+
+    // 4. Получаем уникальные группы (без дубликатов)
     const uniqueGroupsMap = new Map();
     const courseGroupsToUpdate = [];
     
@@ -972,7 +968,8 @@ async function completeCourse() {
         courseGroupsToUpdate.push({ id: doc.id, data: groupData });
       }
     });
-    
+
+    // 5. Обновляем course_groups - отмечаем как завершенные
     const updateCourseGroupsPromises = courseGroupsToUpdate.map(item => {
       return db.collection("course_groups").doc(item.id).update({
         completed: true,
@@ -984,11 +981,14 @@ async function completeCourse() {
     });
     
     await Promise.all(updateCourseGroupsPromises);
-    
+
+    // 6. Обрабатываем каждого студента через коллекцию student_course_scores
     for (const [groupId, groupData] of uniqueGroupsMap) {
+      // Получаем информацию о группе
       const groupDoc = await db.collection("groups").doc(groupId).get();
       const groupName = groupDoc.exists ? groupDoc.data().name : 'Неизвестная группа';
 
+      // Получаем всех студентов группы из коллекции usersgroup
       const studentsSnap = await db.collection("usersgroup")
         .where("groupId", "==", groupId)
         .get();
@@ -998,38 +998,32 @@ async function completeCourse() {
         const studentId = studentData.userId;
         const studentName = studentData.userName || studentData.name || studentId;
 
-        let totalScore = 0;
-        let testsCount = 0;
+        // Ищем запись в student_course_scores по userId и courseId
+        const scoresQuery = await db.collection("student_course_scores")
+          .where("userId", "==", studentId)
+          .where("courseId", "==", courseId)
+          .get();
 
-        for (const testId of testIds) {
-          const gradesSnap = await db.collection("test_grades")
-            .where("userId", "==", studentId)
-            .where("testId", "==", testId)
-            .get();
-
-          if (!gradesSnap.empty) {
-            let bestScore = 0;
-            gradesSnap.forEach(doc => {
-              const grade = doc.data();
-              if (grade.bestScore && grade.bestScore > bestScore) {
-                bestScore = grade.bestScore;
-              }
-            });
-            
-            if (bestScore > 0) {
-              totalScore += bestScore;
-              testsCount++;
-            }
-          }
+        let totalScore = null;
+        
+        if (!scoresQuery.empty) {
+          const scoreDoc = scoresQuery.docs[0];
+          totalScore = scoreDoc.data().totalScore;
         }
 
-        const avgScore = testsCount > 0 ? totalScore / testsCount : 0;
-        const passingThreshold = gradesConfig.min3 || 50;
+        // Если нет записи о баллах студента - считаем что баллов 0
+        if (totalScore === null) {
+          console.warn(`Нет данных о баллах для студента ${studentName} (${studentId}) по курсу ${courseName}`);
+          totalScore = 0;
+        }
 
-        if (avgScore < passingThreshold) {
+        // Проверяем: если totalScore < min3 - добавляем в должники
+        if (totalScore < min3) {
+          // Проверяем, нет ли уже активного долга
           const existingDebtSnap = await db.collection("dolg")
             .where("studentId", "==", studentId)
             .where("courseId", "==", courseId)
+            .where("status", "==", "active")
             .get();
 
           if (existingDebtSnap.empty) {
@@ -1041,27 +1035,33 @@ async function completeCourse() {
               courseId: courseId,
               courseName: courseName,
               courseSemester: courseSemester,
-              avgScore: avgScore,
-              testsCompleted: testsCount,
-              totalTests: testIds.length,
-              passingThreshold: passingThreshold,
+              totalScore: totalScore,           // общий балл студента
+              passingThreshold: min3,            // порог для 3
+              min4: min4,
+              min5: min5,
               createdAt: firebase.firestore.FieldValue.serverTimestamp(),
               status: 'active'
             });
+            console.log(`Добавлен должник: ${studentName} (балл: ${totalScore}, порог: ${min3})`);
           }
+        } else {
+          console.log(`Студент ${studentName} сдал курс (балл: ${totalScore}, порог: ${min3})`);
         }
       }
     }
 
+    // 7. Отмечаем курс как завершенный
     await db.collection("courses").doc(courseId).update({
       completed: true,
       completedAt: firebase.firestore.FieldValue.serverTimestamp(),
       completedBy: localStorage.getItem('teacherId')
     });
 
+    // 8. Закрываем модальное окно и показываем уведомление
     $('#completeCourseModal').modal('hide');
-    alert('Курс успешно завершен.');
+    alert('Курс успешно завершен. Студенты с неудовлетворительными баллами добавлены в список должников.');
     
+    // 9. Обновляем UI
     checkCourseStatus();
     loadAssignedGroups();
     
