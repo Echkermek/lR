@@ -34,9 +34,77 @@ document.getElementById('courseNameTitle').textContent = courseName;
 let allTests = [];
 let testPartsMap = new Map();
 let studentsList = [];
+let courseGrades = null; // Храним критерии оценок курса
+
+// Загрузка критериев оценок из course_grades
+async function loadCourseGrades() {
+  try {
+    const gradesDoc = await db.collection("course_grades").doc(courseId).get();
+    if (gradesDoc.exists) {
+      courseGrades = gradesDoc.data();
+      console.log("Course grades loaded:", courseGrades);
+    } else {
+      // Значения по умолчанию, если критерии не установлены
+      courseGrades = {
+        min3: 50,
+        min4: 66,
+        min5: 77
+      };
+      console.log("Using default grades:", courseGrades);
+    }
+  } catch (error) {
+    console.error("Error loading course grades:", error);
+    courseGrades = { min3: 50, min4: 66, min5: 77 };
+  }
+}
+
+// Получение общей суммы баллов студента из student_course_scores
+async function getStudentTotalScore(studentId, studentName) {
+  try {
+    const docId = `${studentId}_${courseId}`;
+    const scoreDoc = await db.collection("student_course_scores").doc(docId).get();
+    
+    if (scoreDoc.exists) {
+      const totalScore = scoreDoc.data().totalScore || 0;
+      console.log(`Student ${studentName} totalScore: ${totalScore}`);
+      return totalScore;
+    } else {
+      console.warn(`No student_course_scores found for ${studentName} (${studentId})`);
+      return 0;
+    }
+  } catch (error) {
+    console.error(`Error getting totalScore for ${studentName}:`, error);
+    return 0;
+  }
+}
+
+// Определение оценки на основе totalScore и course_grades
+function getGradeFromTotalScore(totalScore) {
+  if (!courseGrades) {
+    return { text: 'неуд', class: 'bg-unsatisfactory', score: totalScore };
+  }
+  
+  const min3 = courseGrades.min3 || 50;
+  const min4 = courseGrades.min4 || 66;
+  const min5 = courseGrades.min5 || 77;
+  
+  if (totalScore >= min5) {
+    return { text: 'отл', class: 'bg-excellent', score: totalScore };
+  } else if (totalScore >= min4) {
+    return { text: 'хор', class: 'bg-good', score: totalScore };
+  } else if (totalScore >= min3) {
+    return { text: 'удовл', class: 'bg-satisfactory', score: totalScore };
+  } else {
+    return { text: 'неуд', class: 'bg-unsatisfactory', score: totalScore };
+  }
+}
 
 async function loadPerformanceData() {
   try {
+    // 1. Загружаем критерии оценок
+    await loadCourseGrades();
+    
+    // 2. Загружаем должников
     const debtsSnapshot = await db.collection("dolg")
       .where("groupId", "==", groupId)
       .where("courseId", "==", courseId)
@@ -49,16 +117,35 @@ async function loadPerformanceData() {
       return;
     }
 
+    // 3. Собираем студентов-должников
     const studentIds = [];
+    const studentPromises = [];
+    
     debtsSnapshot.forEach(doc => {
       const debt = doc.data();
       studentIds.push(debt.studentId);
-      studentsList.push({
+      
+      // Сохраняем базовую информацию о студенте
+      const studentInfo = {
         id: debt.studentId,
-        name: debt.studentName
-      });
+        name: debt.studentName,
+        debtDocId: doc.id
+      };
+      studentsList.push(studentInfo);
+      
+      // Загружаем totalScore для каждого студента
+      studentPromises.push(getStudentTotalScore(debt.studentId, debt.studentName));
+    });
+    
+    // Ждем загрузки всех totalScore
+    const studentScores = await Promise.all(studentPromises);
+    
+    // Привязываем scores к студентам
+    studentsList.forEach((student, index) => {
+      student.totalScore = studentScores[index];
     });
 
+    // 4. Загружаем тесты курса
     const testsSnapshot = await db.collection("test_course")
       .where("courseId", "==", courseId)
       .get();
@@ -69,6 +156,7 @@ async function loadPerformanceData() {
       return;
     }
 
+    // 5. Загружаем информацию о тестах и их частях
     allTests = [];
     for (const doc of testsSnapshot.docs) {
       const testId = doc.data().testId;
@@ -103,19 +191,25 @@ async function loadPerformanceData() {
 
     allTests.sort((a, b) => a.num - b.num);
 
+    // 6. Загружаем дедлайны
     const deadlinesMap = new Map();
-    const deadlinesSnapshot = await db.collection("deadlines")
-      .where("groupId", "==", groupId)
-      .where("testId", "in", allTests.map(t => t.id))
-      .get();
+    if (allTests.length > 0) {
+      const deadlinesSnapshot = await db.collection("deadlines")
+        .where("groupId", "==", groupId)
+        .where("testId", "in", allTests.map(t => t.id))
+        .get();
 
-    deadlinesSnapshot.forEach(doc => {
-      const data = doc.data();
-      deadlinesMap.set(data.testId, data.deadline);
-    });
+      deadlinesSnapshot.forEach(doc => {
+        const data = doc.data();
+        deadlinesMap.set(data.testId, data.deadline);
+      });
+    }
 
+    // 7. Загружаем оценки по тестам
     const gradesMap = new Map();
     for (const test of allTests) {
+      if (studentIds.length === 0) continue;
+      
       const gradesSnapshot = await db.collection("test_grades")
         .where("testId", "==", test.id)
         .where("userId", "in", studentIds)
@@ -134,6 +228,7 @@ async function loadPerformanceData() {
       });
     }
 
+    // 8. Строим таблицу
     buildPerformanceTable(studentsList, allTests, gradesMap, deadlinesMap);
 
   } catch (error) {
@@ -154,6 +249,7 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
     return; 
   }
   
+  // Построение заголовка таблицы
   let headerHTML = '<tr>';
   headerHTML += '<th rowspan="3" style="min-width: 200px;">Студент</th>';
   
@@ -163,11 +259,12 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
     headerHTML += `<th colspan="${colSpan}">${test.name}</th>`;
   });
   
+  headerHTML += '<th rowspan="3" style="min-width: 120px;">Общий балл</th>';
   headerHTML += '<th rowspan="3" style="min-width: 100px;">Оценка</th>';
   headerHTML += '</tr>';
   
+  // Строка с дедлайнами
   headerHTML += '<tr class="deadline-row">';
-  
   tests.forEach(test => {
     const parts = testPartsMap.get(test.id) || [];
     const colSpan = parts.length || 1;
@@ -175,11 +272,10 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
     const deadlineText = deadline ? deadline : 'Нет срока';
     headerHTML += `<th colspan="${colSpan}" title="Срок сдачи: ${deadlineText}">${deadlineText}</th>`;
   });
-  
   headerHTML += '</tr>';
   
+  // Строка с названиями частей
   headerHTML += '<tr>';
-  
   tests.forEach(test => {
     const parts = testPartsMap.get(test.id) || [];
     if (parts.length) {
@@ -190,17 +286,16 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
       headerHTML += '<th class="test-part" title="Тест">Тест</th>';
     }
   });
-  
   headerHTML += '</tr>';
   header.innerHTML = headerHTML;
   
+  // Построение тела таблицы
   let tableHTML = '';
   
   students.forEach(student => {
     let row = `<tr><td class="student-name" title="${student.name}">${student.name}</td>`;
-    let totalScore = 0;
-    let testsTaken = 0;
     
+    // Проходим по всем тестам и показываем баллы за части
     tests.forEach(test => {
       const parts = testPartsMap.get(test.id) || [];
       const key = `${student.id}_${test.id}`;
@@ -209,8 +304,6 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
       if (parts.length) {
         parts.forEach(part => {
           if (grade) { 
-            totalScore += grade.score; 
-            testsTaken++; 
             row += `<td title="Тест: ${test.name}
 Часть: ${part.name}
 Баллы: ${grade.score}
@@ -223,8 +316,6 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
         });
       } else {
         if (grade) { 
-          totalScore += grade.score; 
-          testsTaken++; 
           row += `<td title="Тест: ${test.name}
 Баллы: ${grade.score}
 Дата: ${grade.date ? new Date(grade.date.seconds * 1000).toLocaleDateString('ru-RU') : 'Неизвестно'}">${grade.score}</td>`; 
@@ -235,24 +326,21 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
       }
     });
     
-    const avg = tests.length ? (totalScore / tests.length).toFixed(1) : '0.0';
-    let gradeClass = 'bg-unsatisfactory';
-    let gradeText = 'неуд';
-    const avgNum = parseFloat(avg);
+    // Получаем общий балл студента из student_course_scores
+    const totalScore = student.totalScore || 0;
     
-    if (avgNum >= 85) { 
-      gradeClass = 'bg-excellent'; 
-      gradeText = 'отл'; 
-    } else if (avgNum >= 70) { 
-      gradeClass = 'bg-good'; 
-      gradeText = 'хор'; 
-    } else if (avgNum >= 60) { 
-      gradeClass = 'bg-satisfactory'; 
-      gradeText = 'удовл'; 
-    }
+    // Получаем оценку на основе totalScore и course_grades
+    const gradeInfo = getGradeFromTotalScore(totalScore);
     
-    row += `<td class="${gradeClass}" title="Средний балл: ${avg}
-Сдано тестов: ${testsTaken} из ${tests.length}">${gradeText}</td>`;
+    // Отображаем общий балл
+    row += `<td class="total-score-cell" title="Общий балл за курс: ${totalScore.toFixed(1)}">${totalScore.toFixed(1)}</td>`;
+    
+    // Отображаем оценку
+    row += `<td class="${gradeInfo.class}" title="Общий балл: ${totalScore.toFixed(1)}
+Порог для 3: ${courseGrades?.min3 || 50}
+Порог для 4: ${courseGrades?.min4 || 66}
+Порог для 5: ${courseGrades?.min5 || 77}">${gradeInfo.text}</td>`;
+    
     row += '</tr>';
     tableHTML += row;
   });
@@ -260,4 +348,64 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
   tbody.innerHTML = tableHTML;
 }
 
+// Добавляем CSS для новых стилей
+function addCustomStyles() {
+  const style = document.createElement('style');
+  style.textContent = `
+    .total-score-cell {
+      font-weight: bold;
+      background-color: #f8f9fa;
+    }
+    .bg-excellent {
+      background-color: #28a745 !important;
+      color: white !important;
+      font-weight: bold;
+      text-align: center;
+    }
+    .bg-good {
+      background-color: #17a2b8 !important;
+      color: white !important;
+      font-weight: bold;
+      text-align: center;
+    }
+    .bg-satisfactory {
+      background-color: #ffc107 !important;
+      color: #333 !important;
+      font-weight: bold;
+      text-align: center;
+    }
+    .bg-unsatisfactory {
+      background-color: #dc3545 !important;
+      color: white !important;
+      font-weight: bold;
+      text-align: center;
+    }
+    .deadline-row th {
+      font-size: 0.85rem;
+      background-color: #e9ecef;
+    }
+    .test-part {
+      font-size: 0.85rem;
+      background-color: #f8f9fa;
+    }
+    .student-name {
+      font-weight: bold;
+      background-color: #f8f9fa;
+    }
+    .info-card {
+      margin: 20px 0;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #007bff;
+    }
+    .back-btn {
+      margin: 20px 0 10px 0;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// Инициализация
+addCustomStyles();
 loadPerformanceData();
