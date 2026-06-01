@@ -105,6 +105,7 @@ function executeQuery(query) {
         
         const isPassed = attempt.isPassed === true;
         
+        // Обогащаем данные (функция изменяет объект attempt)
         await enrichAttemptData(attempt);
         
         if (isPassed) {
@@ -125,15 +126,22 @@ function executeQuery(query) {
       showEmptyLists();
     });
 }
-
 async function enrichAttemptData(attempt) {
   try {
-    const userDoc = await db.collection("users").doc(attempt.userId).get();
+    // Если передан объект с id, используем его
+    const userId = attempt.userId;
+    const attemptId = attempt.id;
+    
+    console.log('Enriching attempt:', attemptId, 'userId:', userId);
+    
+    const userDoc = await db.collection("users").doc(userId).get();
     if (userDoc.exists) {
       const userData = userDoc.data();
-      attempt.userName = `${userData.name || ''} ${userData.surname || ''}`.trim() || attempt.userId;
+      attempt.userName = `${userData.name || ''} ${userData.surname || ''}`.trim() || userId;
+      console.log('Found user:', attempt.userName);
     } else {
-      attempt.userName = attempt.userId;
+      attempt.userName = userId;
+      console.log('User not found, using ID:', userId);
     }
 
     if (attempt.partId && attempt.testId) {
@@ -271,8 +279,10 @@ async function rateAnswer(attemptId) {
 
     currentAttemptId = attemptId;
     const attempt = attemptDoc.data();
+    attempt.id = attemptId;  // Добавляем id
 
-    await enrichAttemptData({ id: attemptId, ...attempt });
+    // Исправлено: передаем сам объект attempt, а не новый объект
+    await enrichAttemptData(attempt);
 
     document.getElementById('modalStudentName').textContent = attempt.userName || 'Неизвестный студент';
     document.getElementById('modalTestInfo').textContent = `${attempt.testTitle || 'Тест'} - ${attempt.partTitle || 'Часть'}`;
@@ -357,8 +367,10 @@ async function editGrade(attemptId) {
 
     currentAttemptId = attemptId;
     const attempt = attemptDoc.data();
+    attempt.id = attemptId;  // Добавляем id
 
-    await enrichAttemptData({ id: attemptId, ...attempt });
+    // Исправлено: передаем сам объект attempt
+    await enrichAttemptData(attempt);
 
     document.getElementById('editStudentName').textContent = attempt.userName || 'Неизвестный студент';
     document.getElementById('editTestInfo').textContent = `${attempt.testTitle || 'Тест'} - ${attempt.partTitle || 'Часть'}`;
