@@ -917,6 +917,232 @@ function confirmCompleteCourse() {
   $('#completeCourseModal').modal('show');
 }
 
+
+
+
+
+
+
+
+
+// ========== НОВАЯ ФУНКЦИЯ: Завершение курса для выбранных групп ==========
+
+async function showCompleteForGroupsModal() {
+  // Проверяем, не завершен ли курс глобально
+  const courseDoc = await db.collection("courses").doc(courseId).get();
+  if (courseDoc.exists && courseDoc.data().completed === true) {
+    alert('Курс уже глобально завершен. Нельзя завершить его для групп.');
+    return;
+  }
+  
+  // Загружаем список групп, привязанных к курсу (которые еще не завершены)
+  const courseGroupsSnap = await db.collection("course_groups")
+    .where("courseId", "==", courseId)
+    .get();
+  
+  const groupsContainer = document.getElementById('groupsCheckboxList');
+  if (!groupsContainer) return;
+  
+  groupsContainer.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm text-primary"></div><span> Загрузка групп...</span></div>';
+  
+  // Собираем уникальные группы, которые еще не завершены
+  const uniqueGroupsMap = new Map();
+  
+  for (const doc of courseGroupsSnap.docs) {
+    const courseGroupData = doc.data();
+    const groupId = courseGroupData.groupId;
+    const isCompletedForGroup = courseGroupData.completed === true;
+    
+    // Показываем только незавершенные группы
+    if (!isCompletedForGroup && !uniqueGroupsMap.has(groupId)) {
+      const groupDoc = await db.collection("groups").doc(groupId).get();
+      if (groupDoc.exists) {
+        uniqueGroupsMap.set(groupId, {
+          id: groupId,
+          name: groupDoc.data().name,
+          courseGroupId: doc.id,
+          semester: courseGroupData.semester
+        });
+      }
+    }
+  }
+  
+  if (uniqueGroupsMap.size === 0) {
+    groupsContainer.innerHTML = '<div class="alert alert-info">Нет активных групп для завершения курса</div>';
+    return;
+  }
+  
+  // Отображаем чекбоксы для выбора групп
+  let html = '';
+  for (const group of uniqueGroupsMap.values()) {
+    html += `
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" value="${group.id}" id="group_${group.id}" data-course-group-id="${group.courseGroupId}" data-group-name="${group.name}">
+        <label class="form-check-label" for="group_${group.id}">
+          ${group.name} (семестр ${group.semester})
+        </label>
+      </div>
+    `;
+  }
+  
+  groupsContainer.innerHTML = html;
+  
+  // Показываем модальное окно
+  $('#completeForGroupsModal').modal('show');
+}
+
+
+
+async function completeCourseForGroups() {
+  // Получаем выбранные группы
+  const selectedCheckboxes = document.querySelectorAll('#groupsCheckboxList input[type="checkbox"]:checked');
+  
+  if (selectedCheckboxes.length === 0) {
+    alert('Выберите хотя бы одну группу');
+    return;
+  }
+  
+  const confirmBtn = document.getElementById('confirmCompleteForGroupsBtn');
+  const originalText = confirmBtn.innerHTML;
+  confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Завершение...';
+  confirmBtn.disabled = true;
+  
+  try {
+    // 1. Загружаем критерии оценок для этого курса
+    let min3 = 50;
+    let min4 = 66;
+    let min5 = 77;
+    
+    const gradesDoc = await db.collection("course_grades").doc(courseId).get();
+    if (gradesDoc.exists) {
+      min3 = gradesDoc.data().min3 || 50;
+      min4 = gradesDoc.data().min4 || 66;
+      min5 = gradesDoc.data().min5 || 77;
+    }
+    
+    // 2. Получаем информацию о курсе
+    const courseDoc = await db.collection("courses").doc(courseId).get();
+    const courseName = courseDoc.data().name || 'Неизвестный курс';
+    const courseSemester = courseDoc.data().semester;
+    
+    // 3. Обрабатываем каждую выбранную группу
+    let totalDebtorsAdded = 0;
+    
+    for (const checkbox of selectedCheckboxes) {
+      const groupId = checkbox.value;
+      const groupName = checkbox.getAttribute('data-group-name');
+      const courseGroupId = checkbox.getAttribute('data-course-group-id');
+      
+      console.log(`Завершение курса для группы: ${groupName} (${groupId})`);
+      
+      // Получаем всех студентов группы
+      const studentsSnap = await db.collection("usersgroup")
+        .where("groupId", "==", groupId)
+        .get();
+      
+      for (const studentDoc of studentsSnap.docs) {
+        const studentData = studentDoc.data();
+        const studentId = studentData.userId;
+        const studentName = studentData.userName || studentData.name || studentId;
+        
+        // Получаем totalScore студента по этому курсу
+        const docId = `${studentId}_${courseId}`;
+        const scoreDoc = await db.collection("student_course_scores").doc(docId).get();
+        
+        let totalScore = 0;
+        if (scoreDoc.exists) {
+          totalScore = scoreDoc.data().totalScore || 0;
+        }
+        
+        // Если totalScore < min3 - добавляем в должники
+        if (totalScore < min3) {
+          // Проверяем, нет ли уже активного долга
+          const existingDebtSnap = await db.collection("dolg")
+            .where("studentId", "==", studentId)
+            .where("courseId", "==", courseId)
+            .where("status", "==", "active")
+            .get();
+          
+          if (existingDebtSnap.empty) {
+            await db.collection("dolg").add({
+              studentId: studentId,
+              studentName: studentName,
+              groupId: groupId,
+              groupName: groupName,
+              courseId: courseId,
+              courseName: courseName,
+              courseSemester: courseSemester,
+              totalScore: totalScore,
+              passingThreshold: min3,
+              min4: min4,
+              min5: min5,
+              completedAt: firebase.firestore.FieldValue.serverTimestamp(),
+              status: 'active'
+            });
+            totalDebtorsAdded++;
+            console.log(`Добавлен должник: ${studentName} (балл: ${totalScore}, порог: ${min3})`);
+          }
+        } else {
+          console.log(`Студент ${studentName} сдал курс (балл: ${totalScore}, порог: ${min3})`);
+        }
+      }
+      
+      // Отмечаем связь курс-группа как завершенную
+      if (courseGroupId) {
+        await db.collection("course_groups").doc(courseGroupId).update({
+          completed: true,
+          completedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } else {
+        // Если не нашли courseGroupId, ищем по groupId
+        const courseGroupSnap = await db.collection("course_groups")
+          .where("courseId", "==", courseId)
+          .where("groupId", "==", groupId)
+          .get();
+        
+        if (!courseGroupSnap.empty) {
+          await db.collection("course_groups").doc(courseGroupSnap.docs[0].id).update({
+            completed: true,
+            completedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
+      }
+    }
+    
+    // Закрываем модальное окно
+    $('#completeForGroupsModal').modal('hide');
+    
+    // Показываем сообщение об успехе
+    alert(`Курс успешно завершен для ${selectedCheckboxes.length} групп.\nДобавлено должников: ${totalDebtorsAdded}`);
+    
+    // Обновляем UI
+    loadAssignedGroups();
+    
+  } catch (error) {
+    console.error("Ошибка завершения курса для групп:", error);
+    alert('Ошибка завершения курса для групп: ' + error.message);
+  } finally {
+    confirmBtn.innerHTML = originalText;
+    confirmBtn.disabled = false;
+  }
+}
+
+// Обновляем функцию checkCourseStatus для отображения статуса групп
+// Добавляем в функцию checkCourseStatus отображение кнопок для завершенных групп
+// (эта функция уже существует, просто убедитесь, что кнопки отображаются правильно)
+
+// Обновляем функцию loadAssignedGroups для отображения статуса завершенности группы
+// Эта функция уже есть, но убедитесь, что она правильно отображает кнопку удаления
+// для завершенных групп (кнопка должна быть disabled)
+
+
+
+
+
+
+
+
+
 async function completeCourse() {
   const confirmBtn = document.getElementById('confirmCompleteBtn');
   const originalText = confirmBtn.innerHTML;

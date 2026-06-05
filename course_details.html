@@ -29,6 +29,8 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
       <button class="btn btn-secondary" onclick="history.back()">Назад к курсам</button>
       <div>
+        <!-- Кнопка "Завершить курс для групп" теперь голубого цвета (btn-primary) -->
+        <button class="btn btn-primary" onclick="showCompleteForGroupsModal()" id="completeForGroupsBtn">Завершить курс для групп</button>
         <button class="btn btn-danger" onclick="confirmCompleteCourse()" id="completeCourseBtn">Завершить курс</button>
         <button class="btn btn-outline-danger ml-2" onclick="confirmDeleteCourse()" id="deleteCourseBtn">Удалить курс</button>
       </div>
@@ -167,26 +169,54 @@
     </div>
   </div>
 
-  <!-- Модальные окна -->
+  <!-- Модальное окно для глобального завершения курса -->
   <div class="modal fade" id="completeCourseModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
       <div class="modal-content">
         <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title">Завершение курса</h5>
+          <h5 class="modal-title">Завершение курса (глобально)</h5>
           <button type="button" class="close" data-dismiss="modal">&times;</button>
         </div>
         <div class="modal-body">
-          <p>Вы уверены, что хотите завершить этот курс?</p>
-          <p class="text-primary"><strong>Важно:</strong> После завершения курса:</p>
-          <ul class="text-primary">
-            <li>Студенты с неудовлетворительными оценками будут добавлены в список должников</li>
+          <p>Вы уверены, что хотите завершить этот курс глобально?</p>
+          <p class="text-danger"><strong>Важно:</strong> После завершения курса:</p>
+          <ul class="text-danger">
             <li>Курс будет перемещен во вкладку "Завершенные курсы"</li>
             <li>Вы больше не сможете редактировать материалы курса</li>
+            <li>Добавление новых групп будет невозможно</li>
           </ul>
+          <p class="text-warning">Студенты с неудовлетворительными оценками из ВСЕХ групп будут добавлены в список должников</p>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-dismiss="modal">Отмена</button>
           <button type="button" class="btn btn-primary" onclick="completeCourse()" id="confirmCompleteBtn">Завершить курс</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно для завершения курса для выбранных групп (голубая тема оформления) -->
+  <div class="modal fade" id="completeForGroupsModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <!-- Заголовок модального окна теперь голубой (bg-primary) для единообразия с кнопкой -->
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">Завершение курса для выбранных групп</h5>
+          <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>Выберите группы, для которых нужно завершить курс:</p>
+          <div id="groupsCheckboxList" style="max-height: 300px; overflow-y: auto;">
+            <div class="text-center">
+              <div class="spinner-border spinner-border-sm text-primary"></div>
+              <span>Загрузка групп...</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Отмена</button>
+          <!-- Кнопка подтверждения также голубая, соответствует общему стилю -->
+          <button type="button" class="btn btn-primary" onclick="completeCourseForGroups()" id="confirmCompleteForGroupsBtn">Завершить для выбранных групп</button>
         </div>
       </div>
     </div>
