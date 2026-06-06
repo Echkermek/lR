@@ -434,7 +434,8 @@ function loadAllLectures() {
   
   dropdownMenu.innerHTML = '<div class="dropdown-item text-muted">Загрузка лекций...</div>';
 
-  db.collection("lections").where("style", "!=", "text").onSnapshot(snap => {
+  // Убираем фильтр, загружаем все лекции, а тексты будем фильтровать позже
+  db.collection("lections").onSnapshot(snap => {
     if (snap.empty) {
       dropdownMenu.innerHTML = '<div class="dropdown-item text-muted">Нет доступных лекций</div>';
       return;
@@ -450,6 +451,10 @@ function loadAllLectures() {
 
     snap.forEach(doc => {
       const lecture = doc.data();
+      
+      // Пропускаем только те, у которых style === "text"
+      if (lecture.style === "text") return;
+      
       const sem = Number(lecture.sem) || 1;
 
       const item = {
@@ -504,6 +509,9 @@ function loadAllLectures() {
     });
 
     dropdownMenu.innerHTML = html;
+
+    // Обновляем счетчик выбранных лекций, если нужно
+    updateSelectedLecturesText();
 
   }, error => {
     console.error("Ошибка загрузки лекций:", error);
