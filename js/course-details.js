@@ -7,6 +7,12 @@ const firebaseConfig = {
   appId: "1:1083579621866:web:73f214d8fd992f0d52d293"
 };
 
+
+let selectedTexts = new Set();
+let allTexts = [];
+let courseTexts = [];
+
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
@@ -39,9 +45,11 @@ document.addEventListener('DOMContentLoaded', function() {
   loadAssignedGroups();
   loadCourseTests();
   loadCourseLectures();
+  loadCourseTexts();      // ДОБАВИТЬ
   loadAllGroups();
   loadAllLectures();
   loadAllTests();
+  loadAllTexts();         // ДОБАВИТЬ
 });
 
 function checkCourseStatus() {
@@ -97,6 +105,356 @@ function checkCourseStatus() {
   });
 }
 
+
+
+async function loadAllTexts() {
+    const dropdownMenu = document.getElementById("textDropdownMenu");
+    if (!dropdownMenu) return;
+    
+    dropdownMenu.innerHTML = '<div class="dropdown-item text-muted">Загрузка текстов...</div>';
+    
+    try {
+        const querySnapshot = await db.collection("lections")
+            .where("style", "==", "text")
+            .get();
+        
+        allTexts = [];
+        const textsBySemester = { 1: [], 2: [], 3: [] };
+        
+        querySnapshot.forEach(doc => {
+            const text = doc.data();
+            const sem = Number(text.sem) || 1;
+            
+            const item = {
+                id: doc.id,
+                ...text,
+                sem
+            };
+            
+            allTexts.push(item);
+            
+            if (!textsBySemester[sem]) textsBySemester[sem] = [];
+            textsBySemester[sem].push(item);
+        });
+        
+        // Сортировка по num
+        Object.keys(textsBySemester).forEach(sem => {
+            textsBySemester[sem].sort((a, b) => Number(a.num || 0) - Number(b.num || 0));
+        });
+        
+        let html = `
+            <div class="text-semester-tabs mb-2">
+                <button type="button" class="btn btn-sm btn-info active" onclick="showTextSemester(1, this)">1 семестр</button>
+                <button type="button" class="btn btn-sm btn-outline-info" onclick="showTextSemester(2, this)">2 семестр</button>
+                <button type="button" class="btn btn-sm btn-outline-info" onclick="showTextSemester(3, this)">3 семестр</button>
+            </div>
+        `;
+        
+        [1, 2, 3].forEach(sem => {
+            html += `<div class="text-semester-panel" id="textSemester${sem}" style="${sem === 1 ? '' : 'display:none;'}">`;
+            
+            if (textsBySemester[sem].length === 0) {
+                html += `<div class="dropdown-item text-muted">Нет текстов за ${sem} семестр</div>`;
+            } else {
+                textsBySemester[sem].forEach(text => {
+                    const isChecked = courseTexts.some(ct => ct.id === text.id);
+                    html += `
+                        <label class="dropdown-item">
+                            <input 
+                                type="checkbox"
+                                class="text-checkbox"
+                                value="${text.id}"
+                                ${isChecked ? 'disabled' : ''}
+                                onchange="updateTextSelection('${text.id}', this.checked)"
+                            >
+                            Текст ${text.num || ''}: ${text.name || 'Без названия'}
+                        </label>
+                    `;
+                });
+            }
+            
+            html += `</div>`;
+        });
+        
+        dropdownMenu.innerHTML = html;
+        updateSelectedTextsText();
+        
+    } catch (error) {
+        console.error("Ошибка загрузки текстов:", error);
+        if (dropdownMenu) {
+            dropdownMenu.innerHTML = `<div class="dropdown-item text-danger">Ошибка загрузки текстов: ${error.message}</div>`;
+        }
+    }
+}
+
+
+
+
+
+function showTextSemester(semester, btn) {
+    document.querySelectorAll('.text-semester-panel').forEach(panel => {
+        panel.style.display = 'none';
+    });
+    
+    const panel = document.getElementById(`textSemester${semester}`);
+    if (panel) panel.style.display = 'block';
+    
+    document.querySelectorAll('.text-semester-tabs button').forEach(button => {
+        button.classList.remove('btn-info', 'active');
+        button.classList.add('btn-outline-info');
+    });
+    
+    btn.classList.remove('btn-outline-info');
+    btn.classList.add('btn-info', 'active');
+}
+
+function updateTextSelection(textId, isSelected) {
+    if (isSelected) {
+        selectedTexts.add(textId);
+    } else {
+        selectedTexts.delete(textId);
+    }
+    updateSelectedTextsText();
+}
+
+// Обновление текста кнопки выбранных текстов
+function updateSelectedTextsText() {
+    const count = selectedTexts.size;
+    const textElement = document.getElementById('selectedTextsText');
+    if (!textElement) return;
+    
+    if (count === 0) {
+        textElement.textContent = 'Выберите тексты...';
+    } else {
+        const selectedNames = [];
+        allTexts.forEach(text => {
+            if (selectedTexts.has(text.id)) {
+                selectedNames.push(`Текст ${text.num}`);
+            }
+        });
+        
+        if (selectedNames.length <= 2) {
+            textElement.textContent = selectedNames.join(', ');
+        } else {
+            textElement.textContent = `Выбрано ${count} текстов`;
+        }
+    }
+}
+
+// Добавление выбранных текстов к курсу
+async function addSelectedTexts() {
+    if (selectedTexts.size === 0) {
+        alert('Выберите хотя бы один текст');
+        return;
+    }
+    
+    const courseDoc = await db.collection("courses").doc(courseId).get();
+    if (courseDoc.exists && courseDoc.data().completed === true) {
+        alert('Нельзя добавлять тексты в завершенный курс');
+        return;
+    }
+    
+    const addBtn = document.getElementById('addTextsBtn');
+    const originalText = addBtn.innerHTML;
+    addBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Добавление...';
+    addBtn.disabled = true;
+    
+    try {
+        let addedCount = 0;
+        for (const textId of selectedTexts) {
+            const existing = await db.collection("lecture_course")
+                .where("courseId", "==", courseId)
+                .where("lectureId", "==", textId)
+                .get();
+            
+            if (existing.empty) {
+                await db.collection("lecture_course").add({
+                    courseId: courseId,
+                    lectureId: textId,
+                    assignedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                addedCount++;
+            }
+        }
+        
+        document.querySelectorAll('.text-checkbox').forEach(cb => {
+            cb.checked = false;
+        });
+        selectedTexts.clear();
+        updateSelectedTextsText();
+        
+        alert(`Успешно добавлено ${addedCount} текстов`);
+        location.reload();
+        
+    } catch (error) {
+        console.error("Ошибка добавления текстов:", error);
+        alert("Ошибка добавления текстов: " + error.message);
+    } finally {
+        addBtn.innerHTML = originalText;
+        addBtn.disabled = false;
+    }
+}
+
+async function loadCourseTexts() {
+    const container = document.getElementById("textsContainer");
+    if (!container) return;
+    
+    container.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Загрузка текстов...</p></div>';
+    
+    try {
+        const snap = await db.collection("lecture_course")
+            .where("courseId", "==", courseId)
+            .get();
+        
+        if (snap.empty) {
+            container.innerHTML = "<p class='text-muted text-center'>К курсу не привязано текстов</p>";
+            return;
+        }
+        
+        const uniqueTextsMap = new Map();
+        
+        snap.forEach(doc => {
+            const lectureCourse = doc.data();
+            const lectureId = lectureCourse.lectureId;
+            
+            if (!uniqueTextsMap.has(lectureId)) {
+                uniqueTextsMap.set(lectureId, {
+                    id: doc.id,
+                    lectureId: lectureId,
+                    courseId: lectureCourse.courseId,
+                    assignedAt: lectureCourse.assignedAt
+                });
+            }
+        });
+        
+        const textPromises = [];
+        const textCourseData = [];
+        
+        uniqueTextsMap.forEach((value, lectureId) => {
+            textCourseData.push(value);
+            textPromises.push(db.collection("lections").doc(lectureId).get());
+        });
+        
+        const textSnaps = await Promise.all(textPromises);
+        
+        courseTexts = [];
+        const textsWithData = [];
+        
+        textSnaps.forEach((textSnap, index) => {
+            if (textSnap && textSnap.exists && textSnap.data().style === "text") {
+                const textData = textSnap.data();
+                courseTexts.push({ id: textSnap.id, ...textData });
+                textsWithData.push({
+                    id: textSnap.id,
+                    data: textData,
+                    lectureCourseId: textCourseData[index].id
+                });
+            }
+        });
+        
+        if (textsWithData.length === 0) {
+            container.innerHTML = "<p class='text-muted text-center'>Нет текстовых материалов</p>";
+            return;
+        }
+        
+        // Группировка по семестрам
+        const textsBySemester = { 1: [], 2: [], 3: [] };
+        
+        textsWithData.forEach(text => {
+            const sem = Number(text.data.sem) || 1;
+            if (!textsBySemester[sem]) textsBySemester[sem] = [];
+            textsBySemester[sem].push(text);
+        });
+        
+        // Сортировка внутри семестров
+        [1, 2, 3].forEach(sem => {
+            textsBySemester[sem].sort((a, b) => Number(a.data.num || 0) - Number(b.data.num || 0));
+        });
+        
+        let html = `
+            <div class="text-semester-tabs mb-3">
+                <button type="button" class="btn btn-sm btn-info active" onclick="showCourseTextSemester(1, this)">1 семестр</button>
+                <button type="button" class="btn btn-sm btn-outline-info" onclick="showCourseTextSemester(2, this)">2 семестр</button>
+                <button type="button" class="btn btn-sm btn-outline-info" onclick="showCourseTextSemester(3, this)">3 семестр</button>
+            </div>
+        `;
+        
+        [1, 2, 3].forEach(sem => {
+            html += `<div class="course-text-semester-panel" id="courseTextSemester${sem}" style="${sem === 1 ? '' : 'display:none;'}">`;
+            
+            if (textsBySemester[sem].length === 0) {
+                html += `<div class="alert alert-info m-3">Нет текстов за ${sem} семестр</div>`;
+            } else {
+                html += `<div class="list-group">`;
+                textsBySemester[sem].forEach(text => {
+                    html += `
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">${text.data.name || 'Без названия'}</h6>
+                                    ${text.data.num ? `<small class="text-muted">№${text.data.num}</small>` : ''}
+                                    ${text.data.url ? `<br><a href="${text.data.url}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">Открыть текст</a>` : ''}
+                                </div>
+                                <button class="btn btn-outline-danger btn-sm" onclick="removeTextFromCourse('${text.lectureCourseId}')">Удалить</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+            
+            html += `</div>`;
+        });
+        
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error("Ошибка загрузки текстов курса:", error);
+        container.innerHTML = `<p class="text-danger text-center">Ошибка загрузки текстов: ${error.message}</p>`;
+    }
+}
+
+// Переключение семестров для текстов в курсе
+function showCourseTextSemester(semester, btn) {
+    document.querySelectorAll('.course-text-semester-panel').forEach(panel => {
+        panel.style.display = 'none';
+    });
+    
+    const panel = document.getElementById(`courseTextSemester${semester}`);
+    if (panel) panel.style.display = 'block';
+    
+    const container = document.querySelector('#texts .text-semester-tabs');
+    if (container) {
+        container.querySelectorAll('button').forEach(button => {
+            button.classList.remove('btn-info', 'active');
+            button.classList.add('btn-outline-info');
+        });
+        btn.classList.remove('btn-outline-info');
+        btn.classList.add('btn-info', 'active');
+    }
+}
+
+// Удаление текста из курса
+async function removeTextFromCourse(lectureCourseId) {
+    if (!confirm("Вы уверены, что хотите удалить этот текст из курса?")) return;
+    
+    try {
+        await db.collection("lecture_course").doc(lectureCourseId).delete();
+        alert("Текст удален из курса");
+        loadCourseTexts(); // Обновляем список
+        loadAllTexts();    // Обновляем доступные тексты
+    } catch (error) {
+        console.error("Ошибка удаления текста:", error);
+        alert("Ошибка удаления текста: " + error.message);
+    }
+}
+
+
+
+
+
+
+
 function loadAllGroups() {
   db.collection("groups").orderBy("name").onSnapshot(snap => {
     const groupSelect = document.getElementById("groupSelect");
@@ -122,7 +480,7 @@ function loadAllLectures() {
   
   dropdownMenu.innerHTML = '<div class="dropdown-item text-muted">Загрузка лекций...</div>';
 
-  db.collection("lections").onSnapshot(snap => {
+  db.collection("lections").where("style", "!=", "text").onSnapshot(snap => {
     if (snap.empty) {
       dropdownMenu.innerHTML = '<div class="dropdown-item text-muted">Нет доступных лекций</div>';
       return;
