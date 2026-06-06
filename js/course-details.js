@@ -1289,7 +1289,7 @@ async function showCompleteForGroupsModal() {
   // Проверяем, не завершен ли курс глобально
   const courseDoc = await db.collection("courses").doc(courseId).get();
   if (courseDoc.exists && courseDoc.data().completed === true) {
-    alert('Курс уже глобально завершен. Нельзя завершить его для групп.');
+    alert('Курс уже  завершен. Нельзя завершить его для групп.');
     return;
   }
   
