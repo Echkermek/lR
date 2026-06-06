@@ -171,7 +171,7 @@
         </div>
       </div>
 
-      <!-- Вкладка Текст -->
+      <!-- Вкладка Текст - упрощенная версия без семестров, как лекции -->
       <div class="tab-pane fade" id="texts" role="tabpanel">
         <div class="card mb-3" id="addTextsCard">
           <div class="card-body">
@@ -182,7 +182,7 @@
                   <button class="btn btn-light border dropdown-toggle" type="button" id="textDropdown" data-toggle="dropdown">
                     <span id="selectedTextsText">Выберите тексты...</span>
                   </button>
-                  <div class="dropdown-menu" aria-labelledby="textDropdown" id="textDropdownMenu">
+                  <div class="dropdown-menu" aria-labelledby="textDropdown" id="textDropdownMenu" style="max-height: 300px; overflow-y: auto;">
                     <div class="text-center" id="textLoading">
                       <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
                       <span class="ml-2">Загрузка текстов...</span>
@@ -208,16 +208,16 @@
     </div>
   </div>
 
-  <!-- Модальное окно для  завершения курса -->
+  <!-- Модальное окно для глобального завершения курса -->
   <div class="modal fade" id="completeCourseModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
       <div class="modal-content">
         <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title">Завершение курса</h5>
+          <h5 class="modal-title">Завершение курса (глобально)</h5>
           <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
         </div>
         <div class="modal-body">
-          <p>Вы уверены, что хотите завершить этот курс?</p>
+          <p>Вы уверены, что хотите завершить этот курс глобально?</p>
           <p class="text-danger"><strong>Важно:</strong> После завершения курса:</p>
           <ul class="text-danger">
             <li>Курс будет перемещен во вкладку "Завершенные курсы"</li>

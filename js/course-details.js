@@ -119,61 +119,39 @@ async function loadAllTexts() {
             .get();
         
         allTexts = [];
-        const textsBySemester = { 1: [], 2: [], 3: [] };
         
         querySnapshot.forEach(doc => {
             const text = doc.data();
-            const sem = Number(text.sem) || 1;
-            
-            const item = {
+            allTexts.push({
                 id: doc.id,
-                ...text,
-                sem
-            };
-            
-            allTexts.push(item);
-            
-            if (!textsBySemester[sem]) textsBySemester[sem] = [];
-            textsBySemester[sem].push(item);
+                ...text
+            });
         });
         
         // Сортировка по num
-        Object.keys(textsBySemester).forEach(sem => {
-            textsBySemester[sem].sort((a, b) => Number(a.num || 0) - Number(b.num || 0));
-        });
+        allTexts.sort((a, b) => Number(a.num || 0) - Number(b.num || 0));
         
-        let html = `
-            <div class="text-semester-tabs mb-2">
-                <button type="button" class="btn btn-sm btn-info active" onclick="showTextSemester(1, this)">1 семестр</button>
-                <button type="button" class="btn btn-sm btn-outline-info" onclick="showTextSemester(2, this)">2 семестр</button>
-                <button type="button" class="btn btn-sm btn-outline-info" onclick="showTextSemester(3, this)">3 семестр</button>
-            </div>
-        `;
+        if (allTexts.length === 0) {
+            dropdownMenu.innerHTML = '<div class="dropdown-item text-muted">Нет доступных текстов</div>';
+            return;
+        }
         
-        [1, 2, 3].forEach(sem => {
-            html += `<div class="text-semester-panel" id="textSemester${sem}" style="${sem === 1 ? '' : 'display:none;'}">`;
-            
-            if (textsBySemester[sem].length === 0) {
-                html += `<div class="dropdown-item text-muted">Нет текстов за ${sem} семестр</div>`;
-            } else {
-                textsBySemester[sem].forEach(text => {
-                    const isChecked = courseTexts.some(ct => ct.id === text.id);
-                    html += `
-                        <label class="dropdown-item">
-                            <input 
-                                type="checkbox"
-                                class="text-checkbox"
-                                value="${text.id}"
-                                ${isChecked ? 'disabled' : ''}
-                                onchange="updateTextSelection('${text.id}', this.checked)"
-                            >
-                            Текст ${text.num || ''}: ${text.name || 'Без названия'}
-                        </label>
-                    `;
-                });
-            }
-            
-            html += `</div>`;
+        let html = '';
+        allTexts.forEach(text => {
+            // Проверяем, уже добавлен ли текст в курс
+            const isAdded = courseTexts.some(ct => ct.id === text.id);
+            html += `
+                <label class="dropdown-item">
+                    <input 
+                        type="checkbox"
+                        class="text-checkbox"
+                        value="${text.id}"
+                        ${isAdded ? 'disabled' : ''}
+                        onchange="updateTextSelection('${text.id}', this.checked)"
+                    >
+                    Текст ${text.num || ''}: ${text.name || 'Без названия'}
+                </label>
+            `;
         });
         
         dropdownMenu.innerHTML = html;
@@ -186,6 +164,7 @@ async function loadAllTexts() {
         }
     }
 }
+
 
 
 
@@ -277,6 +256,7 @@ async function addSelectedTexts() {
             }
         }
         
+        // Сбрасываем чекбоксы
         document.querySelectorAll('.text-checkbox').forEach(cb => {
             cb.checked = false;
         });
@@ -284,7 +264,8 @@ async function addSelectedTexts() {
         updateSelectedTextsText();
         
         alert(`Успешно добавлено ${addedCount} текстов`);
-        location.reload();
+        loadCourseTexts(); // Обновляем список текстов курса
+        loadAllTexts();    // Обновляем доступные тексты
         
     } catch (error) {
         console.error("Ошибка добавления текстов:", error);
@@ -308,6 +289,7 @@ async function loadCourseTexts() {
         
         if (snap.empty) {
             container.innerHTML = "<p class='text-muted text-center'>К курсу не привязано текстов</p>";
+            courseTexts = [];
             return;
         }
         
@@ -357,53 +339,26 @@ async function loadCourseTexts() {
             return;
         }
         
-        // Группировка по семестрам
-        const textsBySemester = { 1: [], 2: [], 3: [] };
+        // Сортируем по num (как лекции)
+        textsWithData.sort((a, b) => Number(a.data.num || 0) - Number(b.data.num || 0));
         
+        // Отображаем как простой список (как лекции)
+        let html = '';
         textsWithData.forEach(text => {
-            const sem = Number(text.data.sem) || 1;
-            if (!textsBySemester[sem]) textsBySemester[sem] = [];
-            textsBySemester[sem].push(text);
-        });
-        
-        // Сортировка внутри семестров
-        [1, 2, 3].forEach(sem => {
-            textsBySemester[sem].sort((a, b) => Number(a.data.num || 0) - Number(b.data.num || 0));
-        });
-        
-        let html = `
-            <div class="text-semester-tabs mb-3">
-                <button type="button" class="btn btn-sm btn-info active" onclick="showCourseTextSemester(1, this)">1 семестр</button>
-                <button type="button" class="btn btn-sm btn-outline-info" onclick="showCourseTextSemester(2, this)">2 семестр</button>
-                <button type="button" class="btn btn-sm btn-outline-info" onclick="showCourseTextSemester(3, this)">3 семестр</button>
-            </div>
-        `;
-        
-        [1, 2, 3].forEach(sem => {
-            html += `<div class="course-text-semester-panel" id="courseTextSemester${sem}" style="${sem === 1 ? '' : 'display:none;'}">`;
-            
-            if (textsBySemester[sem].length === 0) {
-                html += `<div class="alert alert-info m-3">Нет текстов за ${sem} семестр</div>`;
-            } else {
-                html += `<div class="list-group">`;
-                textsBySemester[sem].forEach(text => {
-                    html += `
-                        <div class="list-group-item">
-                            <div class="d-flex w-100 justify-content-between align-items-center">
-                                <div>
-                                    <h6 class="mb-1">${text.data.name || 'Без названия'}</h6>
-                                    ${text.data.num ? `<small class="text-muted">№${text.data.num}</small>` : ''}
-                                    ${text.data.url ? `<br><a href="${text.data.url}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">Открыть текст</a>` : ''}
-                                </div>
-                                <button class="btn btn-outline-danger btn-sm" onclick="removeTextFromCourse('${text.lectureCourseId}')">Удалить</button>
-                            </div>
+            html += `
+                <div class="lecture-item" style="border: 1px solid #ddd; padding: 12px; margin-bottom: 10px; border-radius: 5px;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${text.data.name || "Без названия"}</strong>
+                            ${text.data.num ? `<small class="text-muted"> — №${text.data.num}</small>` : ""}
+                            ${text.data.url ? `<br><a href="${text.data.url}" target="_blank" class="text-success">Открыть текст</a>` : ""}
                         </div>
-                    `;
-                });
-                html += `</div>`;
-            }
-            
-            html += `</div>`;
+                        <button class="btn btn-outline-danger btn-sm" onclick="removeTextFromCourse('${text.lectureCourseId}')">
+                            Удалить
+                        </button>
+                    </div>
+                </div>
+            `;
         });
         
         container.innerHTML = html;
@@ -448,7 +403,6 @@ async function removeTextFromCourse(lectureCourseId) {
         alert("Ошибка удаления текста: " + error.message);
     }
 }
-
 
 
 
