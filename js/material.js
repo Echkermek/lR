@@ -1,4 +1,4 @@
-// Firebase конфигурация
+
 const firebaseConfig = {
   apiKey: "AIzaSyD2QJQcuUI9lCJP_kqp5tW24J8TN6phPWw",
   authDomain: "prob1-5c047.firebaseapp.com",
@@ -8,7 +8,6 @@ const firebaseConfig = {
   appId: "1:1083579621866:web:73f214d8fd992f0d52d293"
 };
 
-// Инициализация Firebase
 try {
   firebase.initializeApp(firebaseConfig);
   console.log('Firebase инициализирован успешно');
@@ -23,7 +22,6 @@ if (!localStorage.getItem('teacherId')) {
   window.location.href = 'login.html';
 }
 
-// Отображение имени преподавателя
 document.addEventListener('DOMContentLoaded', function() {
   const teacherNameEl = document.getElementById('teacherName');
   if (teacherNameEl) {
@@ -46,7 +44,6 @@ let currentPartId = null;
 let currentQuestionId = null;
 let lectures = [];
 
-// Загрузка лекций для выпадающего списка
 db.collection("lections").orderBy("num").onSnapshot(snap => {
   console.log('Загружено лекций:', snap.size);
   lectures = [];
@@ -68,7 +65,6 @@ function updateLectureSelects() {
   }
 }
 
-// Загрузка тестов
 db.collection("tests").orderBy("num").onSnapshot(snap => {
   console.log('Загружено тестов:', snap.size);
   const container = document.getElementById("testsList");
@@ -107,7 +103,7 @@ db.collection("tests").orderBy("num").onSnapshot(snap => {
   }
 });
 
-// Загрузка лекций для списка
+
 db.collection("lections").orderBy("num").onSnapshot(snap => {
   console.log('Загружено лекций для списка:', snap.size);
   const container = document.getElementById("lecturesList");
@@ -147,7 +143,7 @@ db.collection("lections").orderBy("num").onSnapshot(snap => {
   }
 });
 
-// Функции для работы с тестами
+
 function addTest() {
   const title = document.getElementById("newTestTitle").value.trim();
   const num = document.getElementById("newTestNum").value;
@@ -309,7 +305,7 @@ function deleteTest(testId) {
   }
 }
 
-// Функции для работы с лекциями
+
 function addLecture() {
   const name = document.getElementById("newLectureName").value.trim();
   const num = document.getElementById("newLectureNum").value.trim();
@@ -321,7 +317,7 @@ function addLecture() {
     return;
   }
   
-  // Простая валидация URL
+
   if (!url.startsWith('http://') && !url.startsWith('https://')) {
     if (messageDiv) messageDiv.innerHTML = '<div class="alert alert-warning">URL должен начинаться с http:// или https://</div>';
     return;
@@ -388,7 +384,7 @@ function deleteLecture(lectureId) {
   }
 }
 
-// Функции для работы с частями теста
+
 function openEditPart(testId, partId) {
   currentTestId = testId;
   currentPartId = partId;
@@ -523,7 +519,7 @@ function deletePart(testId, partId) {
   }
 }
 
-// Функции для работы с вопросами и ответами
+
 function openEditQuestion(testId, partId, questionId) {
   currentTestId = testId;
   currentPartId = partId;

@@ -45,11 +45,11 @@ document.addEventListener('DOMContentLoaded', function() {
   loadAssignedGroups();
   loadCourseTests();
   loadCourseLectures();
-  loadCourseTexts();      // ДОБАВИТЬ
+  loadCourseTexts();      
   loadAllGroups();
   loadAllLectures();
   loadAllTests();
-  loadAllTexts();         // ДОБАВИТЬ
+  loadAllTexts();
 });
 
 function checkCourseStatus() {
@@ -128,7 +128,7 @@ async function loadAllTexts() {
             });
         });
         
-        // Сортировка по num
+        
         allTexts.sort((a, b) => Number(a.num || 0) - Number(b.num || 0));
         
         if (allTexts.length === 0) {
@@ -138,7 +138,7 @@ async function loadAllTexts() {
         
         let html = '';
         allTexts.forEach(text => {
-            // Проверяем, уже добавлен ли текст в курс
+            
             const isAdded = courseTexts.some(ct => ct.id === text.id);
             html += `
                 <label class="dropdown-item">
@@ -196,7 +196,7 @@ function updateTextSelection(textId, isSelected) {
     updateSelectedTextsText();
 }
 
-// Обновление текста кнопки выбранных текстов
+
 function updateSelectedTextsText() {
     const count = selectedTexts.size;
     const textElement = document.getElementById('selectedTextsText');
@@ -220,7 +220,7 @@ function updateSelectedTextsText() {
     }
 }
 
-// Добавление выбранных текстов к курсу
+
 async function addSelectedTexts() {
     if (selectedTexts.size === 0) {
         alert('Выберите хотя бы один текст');
@@ -256,7 +256,7 @@ async function addSelectedTexts() {
             }
         }
         
-        // Сбрасываем чекбоксы
+        
         document.querySelectorAll('.text-checkbox').forEach(cb => {
             cb.checked = false;
         });
@@ -264,8 +264,8 @@ async function addSelectedTexts() {
         updateSelectedTextsText();
         
         alert(`Успешно добавлено ${addedCount} текстов`);
-        loadCourseTexts(); // Обновляем список текстов курса
-        loadAllTexts();    // Обновляем доступные тексты
+        loadCourseTexts(); 
+        loadAllTexts();    
         
     } catch (error) {
         console.error("Ошибка добавления текстов:", error);
@@ -339,10 +339,10 @@ async function loadCourseTexts() {
             return;
         }
         
-        // Сортируем по num (как лекции)
+        
         textsWithData.sort((a, b) => Number(a.data.num || 0) - Number(b.data.num || 0));
         
-        // Отображаем как простой список (как лекции)
+        
         let html = '';
         textsWithData.forEach(text => {
             html += `
@@ -369,7 +369,7 @@ async function loadCourseTexts() {
     }
 }
 
-// Переключение семестров для текстов в курсе
+
 function showCourseTextSemester(semester, btn) {
     document.querySelectorAll('.course-text-semester-panel').forEach(panel => {
         panel.style.display = 'none';
@@ -389,15 +389,15 @@ function showCourseTextSemester(semester, btn) {
     }
 }
 
-// Удаление текста из курса
+
 async function removeTextFromCourse(lectureCourseId) {
     if (!confirm("Вы уверены, что хотите удалить этот текст из курса?")) return;
     
     try {
         await db.collection("lecture_course").doc(lectureCourseId).delete();
         alert("Текст удален из курса");
-        loadCourseTexts(); // Обновляем список
-        loadAllTexts();    // Обновляем доступные тексты
+        loadCourseTexts(); 
+        loadAllTexts();    
     } catch (error) {
         console.error("Ошибка удаления текста:", error);
         alert("Ошибка удаления текста: " + error.message);
@@ -434,7 +434,7 @@ function loadAllLectures() {
   
   dropdownMenu.innerHTML = '<div class="dropdown-item text-muted">Загрузка лекций...</div>';
 
-  // Убираем фильтр, загружаем все лекции, а тексты будем фильтровать позже
+  
   db.collection("lections").onSnapshot(snap => {
     if (snap.empty) {
       dropdownMenu.innerHTML = '<div class="dropdown-item text-muted">Нет доступных лекций</div>';
@@ -452,7 +452,7 @@ function loadAllLectures() {
     snap.forEach(doc => {
       const lecture = doc.data();
       
-      // Пропускаем только те, у которых style === "text"
+      
       if (lecture.style === "text") return;
       
       const sem = Number(lecture.sem) || 1;
@@ -510,7 +510,7 @@ function loadAllLectures() {
 
     dropdownMenu.innerHTML = html;
 
-    // Обновляем счетчик выбранных лекций, если нужно
+    
     updateSelectedLecturesText();
 
   }, error => {
@@ -660,7 +660,7 @@ function loadAssignedGroups() {
   
   assignedGroupsContainer.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm text-primary" role="status"></div><span class="ml-2">Загрузка групп...</span></div>';
   
-  // Получаем семестр курса
+  
   let courseSemester = null;
   db.collection("courses").doc(courseId).get().then(courseDoc => {
     if (courseDoc.exists) {
@@ -682,7 +682,7 @@ function loadAssignedGroups() {
         return;
       }
 
-      // Используем Map для уникальных групп
+
       const uniqueGroupsMap = new Map();
       const courseGroups = [];
       
@@ -994,7 +994,7 @@ async function addSelectedLectures() {
     return;
   }
 
-  // ИСПРАВЛЕНО: правильный ID элемента
+  
   const addBtn = document.getElementById('addLecturesBtn');
   const originalText = addBtn.innerHTML;
   addBtn.innerHTML = 'Добавление...';
@@ -1047,7 +1047,7 @@ async function addSelectedTests() {
     return;
   }
 
-  // ИСПРАВЛЕНО: правильный ID элемента
+  
   const addBtn = document.getElementById('addTestsBtn');
   const originalText = addBtn.innerHTML;
   addBtn.innerHTML = 'Добавление...';
@@ -1245,8 +1245,6 @@ function confirmCompleteCourse() {
 
 
 
-// ========== НОВАЯ ФУНКЦИЯ: Завершение курса для выбранных групп ==========
-
 async function showCompleteForGroupsModal() {
   // Проверяем, не завершен ли курс глобально
   const courseDoc = await db.collection("courses").doc(courseId).get();
@@ -1255,7 +1253,7 @@ async function showCompleteForGroupsModal() {
     return;
   }
   
-  // Загружаем список групп, привязанных к курсу (которые еще не завершены)
+  
   const courseGroupsSnap = await db.collection("course_groups")
     .where("courseId", "==", courseId)
     .get();
@@ -1265,7 +1263,7 @@ async function showCompleteForGroupsModal() {
   
   groupsContainer.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm text-primary"></div><span> Загрузка групп...</span></div>';
   
-  // Собираем уникальные группы, которые еще не завершены
+  
   const uniqueGroupsMap = new Map();
   
   for (const doc of courseGroupsSnap.docs) {
@@ -1273,7 +1271,7 @@ async function showCompleteForGroupsModal() {
     const groupId = courseGroupData.groupId;
     const isCompletedForGroup = courseGroupData.completed === true;
     
-    // Показываем только незавершенные группы
+    
     if (!isCompletedForGroup && !uniqueGroupsMap.has(groupId)) {
       const groupDoc = await db.collection("groups").doc(groupId).get();
       if (groupDoc.exists) {
@@ -1292,7 +1290,7 @@ async function showCompleteForGroupsModal() {
     return;
   }
   
-  // Отображаем чекбоксы для выбора групп
+  
   let html = '';
   for (const group of uniqueGroupsMap.values()) {
     html += `
@@ -1307,14 +1305,14 @@ async function showCompleteForGroupsModal() {
   
   groupsContainer.innerHTML = html;
   
-  // Показываем модальное окно
+  
   $('#completeForGroupsModal').modal('show');
 }
 
 
 
 async function completeCourseForGroups() {
-  // Получаем выбранные группы
+  
   const selectedCheckboxes = document.querySelectorAll('#groupsCheckboxList input[type="checkbox"]:checked');
   
   if (selectedCheckboxes.length === 0) {
@@ -1328,7 +1326,7 @@ async function completeCourseForGroups() {
   confirmBtn.disabled = true;
   
   try {
-    // 1. Загружаем критерии оценок для этого курса
+    
     let min3 = 50;
     let min4 = 66;
     let min5 = 77;
@@ -1340,12 +1338,12 @@ async function completeCourseForGroups() {
       min5 = gradesDoc.data().min5 || 77;
     }
     
-    // 2. Получаем информацию о курсе
+    
     const courseDoc = await db.collection("courses").doc(courseId).get();
     const courseName = courseDoc.data().name || 'Неизвестный курс';
     const courseSemester = courseDoc.data().semester;
     
-    // 3. Обрабатываем каждую выбранную группу
+    
     let totalDebtorsAdded = 0;
     
     for (const checkbox of selectedCheckboxes) {
@@ -1355,7 +1353,7 @@ async function completeCourseForGroups() {
       
       console.log(`Завершение курса для группы: ${groupName} (${groupId})`);
       
-      // Получаем всех студентов группы
+      
       const studentsSnap = await db.collection("usersgroup")
         .where("groupId", "==", groupId)
         .get();
@@ -1365,7 +1363,7 @@ async function completeCourseForGroups() {
         const studentId = studentData.userId;
         const studentName = studentData.userName || studentData.name || studentId;
         
-        // Получаем totalScore студента по этому курсу
+        
         const docId = `${studentId}_${courseId}`;
         const scoreDoc = await db.collection("student_course_scores").doc(docId).get();
         
@@ -1374,9 +1372,9 @@ async function completeCourseForGroups() {
           totalScore = scoreDoc.data().totalScore || 0;
         }
         
-        // Если totalScore < min3 - добавляем в должники
+        
         if (totalScore < min3) {
-          // Проверяем, нет ли уже активного долга
+          
           const existingDebtSnap = await db.collection("dolg")
             .where("studentId", "==", studentId)
             .where("courseId", "==", courseId)
@@ -1407,14 +1405,14 @@ async function completeCourseForGroups() {
         }
       }
       
-      // Отмечаем связь курс-группа как завершенную
+      
       if (courseGroupId) {
         await db.collection("course_groups").doc(courseGroupId).update({
           completed: true,
           completedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
       } else {
-        // Если не нашли courseGroupId, ищем по groupId
+        
         const courseGroupSnap = await db.collection("course_groups")
           .where("courseId", "==", courseId)
           .where("groupId", "==", groupId)
@@ -1429,13 +1427,13 @@ async function completeCourseForGroups() {
       }
     }
     
-    // Закрываем модальное окно
+    
     $('#completeForGroupsModal').modal('hide');
     
-    // Показываем сообщение об успехе
+    
     alert(`Курс успешно завершен для ${selectedCheckboxes.length} групп.\nДобавлено должников: ${totalDebtorsAdded}`);
     
-    // Обновляем UI
+    
     loadAssignedGroups();
     
   } catch (error) {
@@ -1447,13 +1445,7 @@ async function completeCourseForGroups() {
   }
 }
 
-// Обновляем функцию checkCourseStatus для отображения статуса групп
-// Добавляем в функцию checkCourseStatus отображение кнопок для завершенных групп
-// (эта функция уже существует, просто убедитесь, что кнопки отображаются правильно)
 
-// Обновляем функцию loadAssignedGroups для отображения статуса завершенности группы
-// Эта функция уже есть, но убедитесь, что она правильно отображает кнопку удаления
-// для завершенных групп (кнопка должна быть disabled)
 
 
 
@@ -1470,7 +1462,7 @@ async function completeCourse() {
   confirmBtn.disabled = true;
 
   try {
-    // 1. Проверяем, есть ли группы у курса
+    
     const courseGroupsSnap = await db.collection("course_groups")
       .where("courseId", "==", courseId)
       .get();
@@ -1482,8 +1474,8 @@ async function completeCourse() {
       return;
     }
 
-    // 2. Загружаем критерии оценок для этого курса
-    let min3 = 50; // значения по умолчанию
+    
+    let min3 = 50;
     let min4 = 66;
     let min5 = 77;
     
@@ -1498,12 +1490,12 @@ async function completeCourse() {
       console.warn('Не удалось загрузить критерии оценок:', error);
     }
 
-    // 3. Получаем информацию о курсе
+    
     const courseDoc = await db.collection("courses").doc(courseId).get();
     const courseName = courseDoc.data().name || 'Неизвестный курс';
     const courseSemester = courseDoc.data().semester;
 
-    // 4. Получаем уникальные группы (без дубликатов)
+    
     const uniqueGroupsMap = new Map();
     const courseGroupsToUpdate = [];
     
@@ -1515,7 +1507,7 @@ async function completeCourse() {
       }
     });
 
-    // 5. Обновляем course_groups - отмечаем как завершенные
+    
     const updateCourseGroupsPromises = courseGroupsToUpdate.map(item => {
       return db.collection("course_groups").doc(item.id).update({
         completed: true,
@@ -1528,13 +1520,13 @@ async function completeCourse() {
     
     await Promise.all(updateCourseGroupsPromises);
 
-    // 6. Обрабатываем каждого студента через коллекцию student_course_scores
+    
     for (const [groupId, groupData] of uniqueGroupsMap) {
-      // Получаем информацию о группе
+      
       const groupDoc = await db.collection("groups").doc(groupId).get();
       const groupName = groupDoc.exists ? groupDoc.data().name : 'Неизвестная группа';
 
-      // Получаем всех студентов группы из коллекции usersgroup
+      
       const studentsSnap = await db.collection("usersgroup")
         .where("groupId", "==", groupId)
         .get();
@@ -1544,7 +1536,7 @@ async function completeCourse() {
         const studentId = studentData.userId;
         const studentName = studentData.userName || studentData.name || studentId;
 
-        // Ищем запись в student_course_scores по userId и courseId
+        
         const scoresQuery = await db.collection("student_course_scores")
           .where("userId", "==", studentId)
           .where("courseId", "==", courseId)
@@ -1557,15 +1549,15 @@ async function completeCourse() {
           totalScore = scoreDoc.data().totalScore;
         }
 
-        // Если нет записи о баллах студента - считаем что баллов 0
+        
         if (totalScore === null) {
           console.warn(`Нет данных о баллах для студента ${studentName} (${studentId}) по курсу ${courseName}`);
           totalScore = 0;
         }
 
-        // Проверяем: если totalScore < min3 - добавляем в должники
+        
         if (totalScore < min3) {
-          // Проверяем, нет ли уже активного долга
+          
           const existingDebtSnap = await db.collection("dolg")
             .where("studentId", "==", studentId)
             .where("courseId", "==", courseId)
@@ -1581,8 +1573,8 @@ async function completeCourse() {
               courseId: courseId,
               courseName: courseName,
               courseSemester: courseSemester,
-              totalScore: totalScore,           // общий балл студента
-              passingThreshold: min3,            // порог для 3
+              totalScore: totalScore,           
+              passingThreshold: min3,           
               min4: min4,
               min5: min5,
               createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -1596,18 +1588,18 @@ async function completeCourse() {
       }
     }
 
-    // 7. Отмечаем курс как завершенный
+    
     await db.collection("courses").doc(courseId).update({
       completed: true,
       completedAt: firebase.firestore.FieldValue.serverTimestamp(),
       completedBy: localStorage.getItem('teacherId')
     });
 
-    // 8. Закрываем модальное окно и показываем уведомление
+    
     $('#completeCourseModal').modal('hide');
     alert('Курс успешно завершен. Студенты с неудовлетворительными баллами добавлены в список должников.');
     
-    // 9. Обновляем UI
+    
     checkCourseStatus();
     loadAssignedGroups();
     
@@ -1720,7 +1712,7 @@ async function cleanupDuplicateTests() {
   
 }
 
-// ========== ФУНКЦИИ ДЛЯ КРИТЕРИЕВ ОЦЕНОК ==========
+
 
 function loadCourseGrades() {
   const gradesDisplay = document.getElementById('gradesDisplay');

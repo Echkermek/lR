@@ -105,7 +105,7 @@ function executeQuery(query) {
         
         const isPassed = attempt.isPassed === true;
         
-        // Обогащаем данные (функция изменяет объект attempt)
+        
         await enrichAttemptData(attempt);
         
         if (isPassed) {
@@ -281,7 +281,7 @@ async function rateAnswer(attemptId) {
     const attempt = attemptDoc.data();
     attempt.id = attemptId;  // Добавляем id
 
-    // Исправлено: передаем сам объект attempt, а не новый объект
+    
     await enrichAttemptData(attempt);
 
     document.getElementById('modalStudentName').textContent = attempt.userName || 'Неизвестный студент';
@@ -367,9 +367,9 @@ async function editGrade(attemptId) {
 
     currentAttemptId = attemptId;
     const attempt = attemptDoc.data();
-    attempt.id = attemptId;  // Добавляем id
+    attempt.id = attemptId; 
 
-    // Исправлено: передаем сам объект attempt
+    
     await enrichAttemptData(attempt);
 
     document.getElementById('editStudentName').textContent = attempt.userName || 'Неизвестный студент';

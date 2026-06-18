@@ -1,4 +1,4 @@
-// Firebase конфигурация
+
 const firebaseConfig = {
   apiKey: "AIzaSyD2QJQcuUI9lCJP_kqp5tW24J8TN6phPWw",
   authDomain: "prob1-5c047.firebaseapp.com",
@@ -8,7 +8,6 @@ const firebaseConfig = {
   appId: "1:1083579621866:web:73f214d8fd992f0d52d293"
 };
 
-// Инициализация Firebase
 try {
   firebase.initializeApp(firebaseConfig);
   console.log('Firebase инициализирован успешно');
@@ -19,9 +18,7 @@ try {
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-// ========== ОБЩИЕ ФУНКЦИИ ==========
 
-// Проверка авторизации
 function checkAuth() {
   const teacherId = localStorage.getItem('teacherId');
   if (!teacherId) {
@@ -32,7 +29,6 @@ function checkAuth() {
   return true;
 }
 
-// Выход из системы
 function logout() {
   console.log('Выход из системы');
   localStorage.removeItem('teacherId');
@@ -46,7 +42,6 @@ function logout() {
   window.location.href = './login.html';
 }
 
-// Форматирование даты
 function formatDate(date) {
   if (!date) return 'Неизвестно';
   if (date.toDate) date = date.toDate();
@@ -59,7 +54,7 @@ function formatDate(date) {
   }).format(date);
 }
 
-// Генерация случайного кода
+
 function generateRandomCode(length) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = '';
@@ -68,8 +63,6 @@ function generateRandomCode(length) {
   }
   return result;
 }
-
-// ========== ФУНКЦИИ ДЛЯ LOGIN.HTML ==========
 
 function initLoginPage() {
   console.log('Инициализация страницы входа');
@@ -124,7 +117,6 @@ function initLoginPage() {
   });
 }
 
-// ========== ФУНКЦИИ ДЛЯ REGISTER.HTML ==========
 
 function initRegisterPage() {
   console.log('Инициализация страницы регистрации');
@@ -189,7 +181,6 @@ function initRegisterPage() {
   });
 }
 
-// ========== ФУНКЦИИ ДЛЯ COURSES.HTML ==========
 
 let activeCoursesListener = null;
 let completedCoursesListener = null;
@@ -198,7 +189,6 @@ function initCoursesPage() {
   console.log('Инициализация страницы курсов');
   if (!checkAuth()) return;
   
-  // Отображаем имя преподавателя
   const teacherNameEl = document.getElementById('teacherName');
   if (teacherNameEl) {
     const name = localStorage.getItem('teacherName') || '';
@@ -294,7 +284,6 @@ async function renderCourses(courses, containerId, isCompleted) {
         .where("courseId", "==", course.id)
         .get();
       
-      // Используем Map для уникальных групп
       const assignedGroupsMap = new Map();
       
       for (const courseGroupDoc of courseGroupsSnap.docs) {
@@ -375,30 +364,25 @@ function addCourse() {
   
   console.log('Добавление курса:', name, 'Семестр:', semester);
   
-  // Определяем критерии оценок в зависимости от семестра
   let min3, min4, min5;
   
   switch(semester) {
     case 1:
-      // 1 семестр: 3-76, 4-90, 5-106
       min3 = 76;
       min4 = 90;
       min5 = 106;
       break;
     case 2:
-      // 2 семестр: 3-98, 4-112, 5-128
       min3 = 98;
       min4 = 112;
       min5 = 128;
       break;
     case 3:
-      // 3 семестр: 3-43, 4-57, 5-73
       min3 = 43;
       min4 = 57;
       min5 = 73;
       break;
     default:
-      // Значения по умолчанию
       min3 = 50;
       min4 = 66;
       min5 = 77;
@@ -406,7 +390,6 @@ function addCourse() {
   
   console.log('Установлены критерии оценок:', { min3, min4, min5 });
   
-  // Сначала создаем курс
   db.collection('courses').add({ 
     name: name,
     semester: semester,
@@ -416,7 +399,6 @@ function addCourse() {
     const courseId = courseRef.id;
     console.log('Курс создан с ID:', courseId);
     
-    // После создания курса, добавляем критерии оценок в course_grades
     return db.collection('course_grades').doc(courseId).set({
       courseid: courseId,
       min3: min3,
@@ -441,13 +423,11 @@ function addCourse() {
   });
 }
 
-// ========== ФУНКЦИИ ДЛЯ GROUPS.HTML ==========
 
 function initGroupsPage() {
   console.log('Инициализация страницы групп');
   if (!checkAuth()) return;
   
-  // Отображаем имя преподавателя
   const teacherNameEl = document.getElementById('teacherName');
   if (teacherNameEl) {
     const name = localStorage.getItem('teacherName') || '';
@@ -472,7 +452,6 @@ function loadGroups() {
       return;
     }
     
-    // Используем Map для уникальных групп
     const uniqueGroupsMap = new Map();
     snap.forEach(doc => {
       if (!uniqueGroupsMap.has(doc.id)) {
@@ -553,13 +532,11 @@ function showGroupCourses(groupId, groupName) {
   window.location.href = './group-courses.html';
 }
 
-// ========== ФУНКЦИИ ДЛЯ GROUP-COURSES.HTML ==========
 
 function initGroupCoursesPage() {
   console.log('Инициализация страницы курсов группы');
   if (!checkAuth()) return;
   
-  // Отображаем имя преподавателя
   const teacherNameEl = document.getElementById('teacherName');
   if (teacherNameEl) {
     const name = localStorage.getItem('teacherName') || '';
@@ -605,14 +582,12 @@ async function loadGroupCourses(groupId) {
       return;
     }
 
-    // Используем Map для уникальных курсов по courseId
     const uniqueCoursesMap = new Map();
     
     for (const doc of courseGroupsSnapshot.docs) {
       const data = doc.data();
       const courseId = data.courseId;
       
-      // Если курс уже есть в Map, пропускаем (оставляем только первую запись)
       if (!uniqueCoursesMap.has(courseId)) {
         const semester = data.semester || 'Не указан';
         
@@ -646,7 +621,6 @@ async function loadGroupCourses(groupId) {
       return;
     }
     
-    // Преобразуем Map в массив и сортируем по названию
     const sortedCourses = Array.from(uniqueCoursesMap.values()).sort((a, b) => 
       a.name.localeCompare(b.name)
     );
@@ -675,7 +649,6 @@ async function loadGroupCourses(groupId) {
       coursesList.appendChild(courseItem);
     });
     
-    // Если были дубликаты, показываем предупреждение
     if (courseGroupsSnapshot.size > uniqueCoursesMap.size) {
       console.warn(`Обнаружено ${courseGroupsSnapshot.size - uniqueCoursesMap.size} дублирующихся записей курсов`);
     }
@@ -693,7 +666,6 @@ function showCoursePerformance(courseId, courseName) {
   window.location.href = './course-performance.html';
 }
 
-/// ========== ФУНКЦИИ ДЛЯ COURSE-PERFORMANCE.HTML ==========
 
 let currentGroupId = null;
 let currentGroupName = null;
@@ -713,7 +685,6 @@ async function loadCourseGrades() {
       courseGrades = gradesDoc.data();
       console.log("Course grades loaded:", courseGrades);
     } else {
-      // Значения по умолчанию, если критерии не установлены
       courseGrades = { min3: 50, min4: 66, min5: 77 };
       console.log("Using default grades:", courseGrades);
     }
@@ -765,7 +736,6 @@ function initCoursePerformancePage() {
   console.log('Инициализация страницы успеваемости');
   if (!checkAuth()) return;
   
-  // Отображаем имя преподавателя
   const teacherNameEl = document.getElementById('teacherName');
   if (teacherNameEl) {
     const name = localStorage.getItem('teacherName') || '';
@@ -773,7 +743,6 @@ function initCoursePerformancePage() {
     teacherNameEl.textContent = `${name} ${surname}`.trim();
   }
   
-  // Загружаем данные из localStorage
   currentGroupId = localStorage.getItem('currentGroupId');
   currentGroupName = localStorage.getItem('currentGroupName');
   currentCourseId = localStorage.getItem('currentCourseId');
@@ -793,17 +762,14 @@ function initCoursePerformancePage() {
     return;
   }
   
-  // Отображаем названия
   const groupTitle = document.getElementById('groupNameTitle');
   const courseTitle = document.getElementById('courseNameTitle');
   
   if (groupTitle) groupTitle.textContent = currentGroupName || 'Группа';
   if (courseTitle) courseTitle.textContent = currentCourseName || 'Курс';
   
-  // Загружаем данные
   loadPerformanceData();
   
-  // Назначаем обработчики событий
   const deadlineForm = document.getElementById('deadlineForm');
   if (deadlineForm) {
     console.log('Найден deadlineForm, назначаем обработчик');
@@ -825,11 +791,9 @@ async function loadPerformanceData() {
   tbody.innerHTML = '<tr><td colspan="100" class="text-center">Загрузка...</td></tr>';
   
   try {
-    // 1. Загружаем критерии оценок курса
     await loadCourseGrades();
     console.log('Критерии оценок загружены:', courseGrades);
     
-    // 2. Получаем студентов группы
     const groupSnapshot = await db.collection("usersgroup")
       .where("groupId", "==", currentGroupId)
       .get();
@@ -845,7 +809,6 @@ async function loadPerformanceData() {
       studentIds.push(data.userId);
     });
     
-    // 3. Загружаем информацию о студентах и их totalScore
     const studentDocs = await Promise.all(
       studentIds.map(userId => db.collection("users").doc(userId).get())
     );
@@ -868,7 +831,6 @@ async function loadPerformanceData() {
     
     console.log('Студенты с totalScore:', allStudents.map(s => ({ name: s.name, totalScore: s.totalScore })));
     
-    // 4. Запрос тестов курса (уникальные)
     const testCourseSnapshot = await db.collection("test_course")
       .where("courseId", "==", currentCourseId)
       .get();
@@ -878,7 +840,6 @@ async function loadPerformanceData() {
       return; 
     }
     
-    // Используем Map для уникальных тестов
     const uniqueTestsMap = new Map();
     
     for (const doc of testCourseSnapshot.docs) {
@@ -905,7 +866,6 @@ async function loadPerformanceData() {
     const deadlinesMap = await loadDeadlinesForGroup(currentGroupId);
     const gradesMap = await loadTestGrades(studentIds);
     
-    // Передаем allStudents с totalScore в buildPerformanceTable
     buildPerformanceTable(allStudents, allTests, gradesMap, deadlinesMap);
     populateForms();
     
@@ -917,15 +877,11 @@ async function loadPerformanceData() {
 
 
 
-
-// Функция для загрузки дедлайнов только для конкретной группы
-// Функция для загрузки дедлайнов только для конкретной группы
 async function loadDeadlinesForGroup(groupId) {
   const deadlinesMap = new Map();
   try {
     console.log('Загрузка дедлайнов для группы:', groupId);
     
-    // Получаем дедлайны для конкретной группы
     const snapshot = await db.collection("deadlines")
       .where("groupId", "==", groupId)
       .get();
@@ -941,7 +897,6 @@ async function loadDeadlinesForGroup(groupId) {
       const data = doc.data();
       console.log('Документ дедлайна:', doc.id, data);
       
-      // Проверяем наличие всех необходимых полей
       if (data.testId && data.deadline) {
         deadlinesMap.set(data.testId, data.deadline);
         console.log('Дедлайн загружен для теста:', data.testId, data.deadline);
@@ -958,7 +913,6 @@ async function loadDeadlinesForGroup(groupId) {
   return deadlinesMap;
 }
 
-// Сохраняем старую функцию для обратной совместимости
 async function loadDeadlines() {
   return loadDeadlinesForGroup(currentGroupId);
 }
@@ -993,7 +947,6 @@ async function loadTestParts() {
 async function loadTestGrades(studentIds) {
   const gradesMap = new Map();
   try {
-    // Загружаем оценки для каждого уникального теста
     const allGrades = await Promise.all(
       allTests.map(test => 
         db.collection("test_grades")
@@ -1009,7 +962,6 @@ async function loadTestGrades(studentIds) {
         const data = doc.data();
         const key = `${data.userId}_${testId}`;
         
-        // Сохраняем только лучший результат для каждого студента и теста
         if (!gradesMap.has(key) || (data.bestScore > gradesMap.get(key).score)) {
           gradesMap.set(key, { 
             score: data.bestScore || 0, 
@@ -1024,6 +976,14 @@ async function loadTestGrades(studentIds) {
   }
   return gradesMap;
 }
+
+function roundScore(score) {
+  if (score === undefined || score === null) return '-';
+  const num = Number(score);
+  if (isNaN(num)) return score;
+  return num.toFixed(2);
+}
+
 
 function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
   const header = document.getElementById('performanceTableHeader');
@@ -1041,7 +1001,6 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
   console.log('buildPerformanceTable - deadlinesMap:', Array.from(deadlinesMap.entries()));
   console.log('Критерии оценок для отображения:', courseGrades);
   
-  // Проверяем, есть ли у тестов части
   let hasParts = false;
   for (const test of tests) {
     const parts = testPartsMap.get(test.id) || [];
@@ -1066,7 +1025,6 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
     headerHTML += '<th rowspan="3" style="min-width: 100px;">Оценка</th>';
     headerHTML += '</tr>';
     
-    // Строка с дедлайнами
     headerHTML += '<tr class="deadline-row">';
     tests.forEach(test => {
       const parts = testPartsMap.get(test.id) || [];
@@ -1077,7 +1035,6 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
     });
     headerHTML += '</tr>';
     
-    // Строка с названиями частей
     headerHTML += '<tr>';
     tests.forEach(test => {
       const parts = testPartsMap.get(test.id) || [];
@@ -1113,7 +1070,6 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
   
   header.innerHTML = headerHTML;
   
-  // Построение тела таблицы
   let tableHTML = '';
   const min3 = courseGrades?.min3 || 50;
   const min4 = courseGrades?.min4 || 66;
@@ -1130,12 +1086,13 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
       if (hasParts && parts.length > 0) {
         parts.forEach((part) => {
           if (grade) { 
+            const displayScore = grade.score.toFixed(1);
             row += `<td onclick="showResetModal('${student.id}', '${student.name} ${student.surname}', '${test.id}', '${test.name}', '${part.name}', ${grade.score}, '${grade.docId}')" 
                       title="Тест: ${test.name}
 Часть: ${part.name}
-Баллы: ${grade.score}
+Баллы: ${displayScore}
 Дата: ${grade.date ? new Date(grade.date.seconds * 1000).toLocaleDateString('ru-RU') : 'Неизвестно'}
-Кликните для сброса попытки">${grade.score}</td>`; 
+Кликните для сброса попытки">${displayScore}</td>`; 
           } else { 
             row += `<td title="Тест: ${test.name}
 Часть: ${part.name}
@@ -1144,19 +1101,19 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
         });
       } else {
         if (grade) { 
+          const displayScore = grade.score.toFixed(1);
           row += `<td onclick="showResetModal('${student.id}', '${student.name} ${student.surname}', '${test.id}', '${test.name}', 'Тест', ${grade.score}, '${grade.docId}')" 
                     title="Тест: ${test.name}
-Баллы: ${grade.score}
+Баллы: ${displayScore}
 Дата: ${grade.date ? new Date(grade.date.seconds * 1000).toLocaleDateString('ru-RU') : 'Неизвестно'}
-Кликните для сброса попытки">${grade.score}</td>`; 
+Кликните для сброса попытки">${displayScore}</td>`; 
         } else { 
           row += `<td title="Тест: ${test.name}
 Статус: Не сдавал">-</td>`; 
         }
       }
     });
-    
-    // Используем totalScore из student_course_scores (уже загружен в student.totalScore)
+
     const totalScore = student.totalScore || 0;
     const gradeInfo = getGradeFromTotalScore(totalScore);
     
@@ -1241,7 +1198,7 @@ function populateForms() {
   const testSelect = document.getElementById('testSelect');
   if (testSelect) {
     testSelect.innerHTML = '<option value="">Выберите тест</option>';
-    // Используем allTests (уже уникальные тесты)
+    
     allTests.forEach(t => {
       testSelect.innerHTML += `<option value="${t.id}">${t.name}</option>`;
     });
@@ -1272,11 +1229,9 @@ async function handleDeadlineSubmit(e) {
   e.preventDefault();
   console.log('handleDeadlineSubmit вызван');
   
-  // Получаем элементы формы
   const testSelect = document.getElementById('testSelect');
   const deadlineDate = document.getElementById('deadlineDate');
   
-  // Проверяем наличие элементов
   if (!testSelect) {
     console.error('testSelect не найден');
     alert('Ошибка: элемент выбора теста не найден');
@@ -1289,7 +1244,6 @@ async function handleDeadlineSubmit(e) {
     return;
   }
   
-  // Получаем значения
   const testId = testSelect.value;
   const dateString = deadlineDate.value;
   
@@ -1300,7 +1254,6 @@ async function handleDeadlineSubmit(e) {
     allTests 
   });
   
-  // Проверяем заполненность
   if (!testId) {
     alert('Пожалуйста, выберите тест');
     return;
@@ -1311,7 +1264,6 @@ async function handleDeadlineSubmit(e) {
     return;
   }
   
-  // Находим выбранный тест
   const selectedTest = allTests.find(t => t.id === testId);
   if (!selectedTest) {
     console.error('Тест не найден в allTests:', testId);
@@ -1319,7 +1271,6 @@ async function handleDeadlineSubmit(e) {
     return;
   }
   
-  // Проверяем наличие groupId
   if (!currentGroupId) {
     console.error('currentGroupId не определен');
     alert('Ошибка: ID группы не определен');
@@ -1340,7 +1291,6 @@ async function handleDeadlineSubmit(e) {
       deadline: dateString
     });
     
-    // Проверяем существующий дедлайн
     const existingDeadline = await db.collection("deadlines")
       .where("testId", "==", testId)
       .where("groupId", "==", currentGroupId)
@@ -1349,7 +1299,6 @@ async function handleDeadlineSubmit(e) {
     console.log('Существующие дедлайны:', existingDeadline.size);
     
     if (!existingDeadline.empty) {
-      // Обновляем существующий дедлайн
       const docId = existingDeadline.docs[0].id;
       await db.collection("deadlines").doc(docId).update({
         deadline: dateString,
@@ -1359,7 +1308,6 @@ async function handleDeadlineSubmit(e) {
       console.log('Дедлайн обновлен, документ:', docId);
       alert(`Срок сдачи обновлен для группы ${currentGroupName || 'группы'}`);
     } else {
-      // Создаем новый дедлайн
       const docRef = await db.collection("deadlines").add({
         groupId: currentGroupId,
         groupName: currentGroupName || 'Группа',
@@ -1372,10 +1320,8 @@ async function handleDeadlineSubmit(e) {
       alert(`Срок сдачи установлен для группы ${currentGroupName || 'группы'}`);
     }
     
-    // Очищаем форму
     e.target.reset();
     
-    // Перезагружаем данные
     await loadPerformanceData();
     
   } catch (error) {
@@ -1471,7 +1417,6 @@ async function transferStudent(studentId, newGroupId) {
   return true;
 }
 
-// ========== ИНИЦИАЛИЗАЦИЯ СТРАНИЦ ==========
 
 document.addEventListener('DOMContentLoaded', function() {
   console.log('DOM загружен');
@@ -1480,12 +1425,10 @@ document.addEventListener('DOMContentLoaded', function() {
   
   console.log('Текущий файл:', filename);
   
-  // Проверяем авторизацию для всех страниц, кроме login и register
   if (filename !== 'login.html' && filename !== 'register.html') {
     if (!checkAuth()) return;
   }
   
-  // Отображаем имя преподавателя, если есть соответствующий элемент
   const teacherNameEl = document.getElementById('teacherName');
   if (teacherNameEl && localStorage.getItem('teacherName')) {
     const name = localStorage.getItem('teacherName') || '';

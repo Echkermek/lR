@@ -83,7 +83,6 @@ body {
   border: 1px dashed #dee2e6;
 }
 
-/* Стили для таблиц */
 .table th { 
   background-color: #f8f9fa; 
   text-align: center; 
@@ -95,7 +94,7 @@ body {
   vertical-align: middle; 
 }
 
-/* Контейнер с прокруткой для таблиц */
+
 .table-responsive { 
   margin-bottom: 20px; 
   overflow-x: auto;
@@ -115,7 +114,7 @@ body {
   border-radius: 4px;
 }
 
-/* Фиксированная первая колонка в таблицах */
+
 .table th:first-child,
 .table td:first-child {
   position: sticky !important;
@@ -151,13 +150,13 @@ body {
   color: #666;
 }
 
-/* Цвета для оценок */
+
 .bg-excellent { background-color: #ccffcd; }
 .bg-good { background-color: #d4edda; }
 .bg-satisfactory { background-color: #fff3cd; }
 .bg-unsatisfactory { background-color: #f8d7da; }
 
-/* Стили для ручной проверки */
+
 .answer-card {
   background: white;
   border-left: 4px solid #ffc107;
@@ -233,7 +232,7 @@ body {
   margin-top: 15px;
 }
 
-/* Стили для материалов */
+
 .test-item, .lecture-item { 
   border-radius: 4px;
   margin-bottom: 10px;
@@ -287,7 +286,7 @@ body {
   font-weight: 600;
 }
 
-/* Стили для уведомлений */
+
 .message-item { 
   margin-bottom: 10px;
   border-left: 3px solid #17a2b8;
@@ -299,7 +298,7 @@ body {
 
 .recipient-badge { font-size: 0.8rem; }
 
-/* Стили для деталей курса */
+
 .course-info-card {
   border-left: 3px solid #17a2b8;
 }
@@ -363,7 +362,7 @@ body {
   margin-left: 15px;
 }
 
-/* Стили для групп и должников */
+
 .group-item { 
   margin-bottom: 10px;
   cursor: pointer;
@@ -409,7 +408,7 @@ body {
   margin-left: 15px;
 }
 
-/* Стили для деталей студента */
+
 .student-info-card {
   background: white;
   border-left: 4px solid #17a2b8;
@@ -419,7 +418,7 @@ body {
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* Индикатор прокрутки */
+
 .scroll-hint {
   text-align: right;
   color: #6c757d;
@@ -434,7 +433,7 @@ body {
   border-radius: 12px;
 }
 
-/* Групповые бейджи */
+
 .group-badge {
   background: #e8f5e8;
   border-radius: 12px;

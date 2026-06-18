@@ -34,9 +34,9 @@ document.getElementById('courseNameTitle').textContent = courseName;
 let allTests = [];
 let testPartsMap = new Map();
 let studentsList = [];
-let courseGrades = null; // Храним критерии оценок курса
+let courseGrades = null; 
 
-// Загрузка критериев оценок из course_grades
+
 async function loadCourseGrades() {
   try {
     const gradesDoc = await db.collection("course_grades").doc(courseId).get();
@@ -44,7 +44,7 @@ async function loadCourseGrades() {
       courseGrades = gradesDoc.data();
       console.log("Course grades loaded:", courseGrades);
     } else {
-      // Значения по умолчанию, если критерии не установлены
+      
       courseGrades = {
         min3: 50,
         min4: 66,
@@ -58,7 +58,7 @@ async function loadCourseGrades() {
   }
 }
 
-// Получение общей суммы баллов студента из student_course_scores
+
 async function getStudentTotalScore(studentId, studentName) {
   try {
     const docId = `${studentId}_${courseId}`;
@@ -78,7 +78,7 @@ async function getStudentTotalScore(studentId, studentName) {
   }
 }
 
-// Определение оценки на основе totalScore и course_grades
+
 function getGradeFromTotalScore(totalScore) {
   if (!courseGrades) {
     return { text: 'неуд', class: 'bg-unsatisfactory', score: totalScore };
@@ -101,10 +101,10 @@ function getGradeFromTotalScore(totalScore) {
 
 async function loadPerformanceData() {
   try {
-    // 1. Загружаем критерии оценок
+    
     await loadCourseGrades();
     
-    // 2. Загружаем должников
+    
     const debtsSnapshot = await db.collection("dolg")
       .where("groupId", "==", groupId)
       .where("courseId", "==", courseId)
@@ -117,7 +117,7 @@ async function loadPerformanceData() {
       return;
     }
 
-    // 3. Собираем студентов-должников
+    
     const studentIds = [];
     const studentPromises = [];
     
@@ -125,7 +125,7 @@ async function loadPerformanceData() {
       const debt = doc.data();
       studentIds.push(debt.studentId);
       
-      // Сохраняем базовую информацию о студенте
+      
       const studentInfo = {
         id: debt.studentId,
         name: debt.studentName,
@@ -133,19 +133,19 @@ async function loadPerformanceData() {
       };
       studentsList.push(studentInfo);
       
-      // Загружаем totalScore для каждого студента
+      
       studentPromises.push(getStudentTotalScore(debt.studentId, debt.studentName));
     });
     
-    // Ждем загрузки всех totalScore
+    
     const studentScores = await Promise.all(studentPromises);
     
-    // Привязываем scores к студентам
+    
     studentsList.forEach((student, index) => {
       student.totalScore = studentScores[index];
     });
 
-    // 4. Загружаем тесты курса
+    
     const testsSnapshot = await db.collection("test_course")
       .where("courseId", "==", courseId)
       .get();
@@ -156,7 +156,7 @@ async function loadPerformanceData() {
       return;
     }
 
-    // 5. Загружаем информацию о тестах и их частях
+    
     allTests = [];
     for (const doc of testsSnapshot.docs) {
       const testId = doc.data().testId;
@@ -191,7 +191,7 @@ async function loadPerformanceData() {
 
     allTests.sort((a, b) => a.num - b.num);
 
-    // 6. Загружаем дедлайны
+  
     const deadlinesMap = new Map();
     if (allTests.length > 0) {
       const deadlinesSnapshot = await db.collection("deadlines")
@@ -205,7 +205,7 @@ async function loadPerformanceData() {
       });
     }
 
-    // 7. Загружаем оценки по тестам
+    
     const gradesMap = new Map();
     for (const test of allTests) {
       if (studentIds.length === 0) continue;
@@ -228,7 +228,7 @@ async function loadPerformanceData() {
       });
     }
 
-    // 8. Строим таблицу
+    
     buildPerformanceTable(studentsList, allTests, gradesMap, deadlinesMap);
 
   } catch (error) {
@@ -249,7 +249,7 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
     return; 
   }
   
-  // Построение заголовка таблицы
+  
   let headerHTML = '<tr>';
   headerHTML += '<th rowspan="3" style="min-width: 200px;">Студент</th>';
   
@@ -263,7 +263,7 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
   headerHTML += '<th rowspan="3" style="min-width: 100px;">Оценка</th>';
   headerHTML += '</tr>';
   
-  // Строка с дедлайнами
+  
   headerHTML += '<tr class="deadline-row">';
   tests.forEach(test => {
     const parts = testPartsMap.get(test.id) || [];
@@ -274,7 +274,7 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
   });
   headerHTML += '</tr>';
   
-  // Строка с названиями частей
+  
   headerHTML += '<tr>';
   tests.forEach(test => {
     const parts = testPartsMap.get(test.id) || [];
@@ -289,13 +289,13 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
   headerHTML += '</tr>';
   header.innerHTML = headerHTML;
   
-  // Построение тела таблицы
+  
   let tableHTML = '';
   
   students.forEach(student => {
     let row = `<tr><td class="student-name" title="${student.name}">${student.name}</td>`;
     
-    // Проходим по всем тестам и показываем баллы за части
+    
     tests.forEach(test => {
       const parts = testPartsMap.get(test.id) || [];
       const key = `${student.id}_${test.id}`;
@@ -326,16 +326,16 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
       }
     });
     
-    // Получаем общий балл студента из student_course_scores
+    
     const totalScore = student.totalScore || 0;
     
-    // Получаем оценку на основе totalScore и course_grades
+    
     const gradeInfo = getGradeFromTotalScore(totalScore);
     
-    // Отображаем общий балл
+    
     row += `<td class="total-score-cell" title="Общий балл за курс: ${totalScore.toFixed(1)}">${totalScore.toFixed(1)}</td>`;
     
-    // Отображаем оценку
+    
     row += `<td class="${gradeInfo.class}" title="Общий балл: ${totalScore.toFixed(1)}
 Порог для 3: ${courseGrades?.min3 || 50}
 Порог для 4: ${courseGrades?.min4 || 66}
@@ -348,7 +348,7 @@ function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
   tbody.innerHTML = tableHTML;
 }
 
-// Добавляем CSS для новых стилей
+
 function addCustomStyles() {
   const style = document.createElement('style');
   style.textContent = `
@@ -406,6 +406,5 @@ function addCustomStyles() {
   document.head.appendChild(style);
 }
 
-// Инициализация
 addCustomStyles();
 loadPerformanceData();
