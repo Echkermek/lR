@@ -7,26 +7,86 @@ const firebaseConfig = {
   appId: "1:1083579621866:web:73f214d8fd992f0d52d293"
 };
 
+// Инициализируем Firebase ПЕРВЫМ
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// Проверяем авторизацию сразу
 if (!localStorage.getItem('teacherId')) {
   window.location.href = './login.html';
 }
 
 function logout() {
   localStorage.removeItem('teacherId');
+  localStorage.removeItem('teacherName');
+  localStorage.removeItem('teacherSurname');
+  localStorage.removeItem('teacherEmail');
+  localStorage.removeItem('isAdmin');
   window.location.href = './login.html';
 }
+
+// Глобальная переменная для статуса admin
+let isAdmin = localStorage.getItem('isAdmin') === 'true';
+
+// Функция для мгновенного скрытия/показа админ-меню
+function updateAdminMenuVisibility() {
+  const adminLinks = document.querySelectorAll('.admin-link, a[href="./admin.html"]');
+  
+  console.log('updateAdminMenuVisibility - isAdmin:', isAdmin);
+  console.log('Найдено ссылок на админку:', adminLinks.length);
+  
+  adminLinks.forEach(link => {
+    if (isAdmin) {
+      link.style.display = '';
+      link.style.visibility = '';
+      link.style.opacity = '1';
+    } else {
+      link.style.display = 'none';
+      link.style.visibility = 'hidden';
+      link.style.opacity = '0';
+    }
+  });
+}
+
+// Обновляем статус admin из Firestore
+async function refreshAdminStatus() {
+  const teacherId = localStorage.getItem('teacherId');
+  if (!teacherId) return false;
+  
+  try {
+    const teacherDoc = await db.collection('teacher').doc(teacherId).get();
+    if (teacherDoc.exists) {
+      const data = teacherDoc.data();
+      isAdmin = data.admin === true;
+      localStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
+      console.log('Статус admin обновлен из Firestore:', isAdmin);
+      return isAdmin;
+    }
+    return false;
+  } catch (error) {
+    console.error('Ошибка проверки прав администратора:', error);
+    return false;
+  }
+}
+
+// Сразу скрываем админ-меню при загрузке (до загрузки Firestore)
+document.addEventListener('DOMContentLoaded', function() {
+  // 1. Мгновенно скрываем на основе localStorage
+  updateAdminMenuVisibility();
+  
+  // 2. Затем обновляем из Firestore и снова применяем
+  refreshAdminStatus().then(() => {
+    updateAdminMenuVisibility();
+  });
+  
+  // 3. Загружаем группы
+  loadGroups();
+});
 
 let currentAnswer = null;
 let currentAttemptId = null;
 let groups = [];
 let groupIds = [];
-
-document.addEventListener('DOMContentLoaded', function() {
-  loadGroups();
-});
 
 function loadGroups() {
   db.collection("groups").orderBy("name").get()
@@ -93,6 +153,7 @@ function loadManualAnswers() {
     executeQuery(query);
   }
 }
+
 
 function executeQuery(query) {
   query.get()
