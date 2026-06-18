@@ -9,7 +9,9 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
 
+// Проверяем авторизацию
 if (!localStorage.getItem('teacherId')) {
   window.location.href = './login.html';
 }
@@ -19,11 +21,77 @@ function logout() {
   localStorage.removeItem('teacherName');
   localStorage.removeItem('teacherSurname');
   localStorage.removeItem('teacherEmail');
+  localStorage.removeItem('isAdmin');
   window.location.href = './login.html';
 }
 
-document.getElementById('teacherName').textContent = 
-  `${localStorage.getItem('teacherName') || ''} ${localStorage.getItem('teacherSurname') || ''}`.trim();
+// Отображаем имя преподавателя
+document.addEventListener('DOMContentLoaded', function() {
+  const teacherNameEl = document.getElementById('teacherName');
+  if (teacherNameEl) {
+    const name = localStorage.getItem('teacherName') || '';
+    const surname = localStorage.getItem('teacherSurname') || '';
+    teacherNameEl.textContent = `${name} ${surname}`.trim();
+  }
+  
+  // Проверяем права администратора
+  checkAdminAccess();
+});
+
+// Функция проверки прав администратора
+async function checkAdminAccess() {
+  const teacherId = localStorage.getItem('teacherId');
+  if (!teacherId) {
+    window.location.href = './login.html';
+    return;
+  }
+
+  try {
+    const teacherDoc = await db.collection('teacher').doc(teacherId).get();
+    
+    if (teacherDoc.exists) {
+      const data = teacherDoc.data();
+      const isAdmin = data.admin === true;
+      
+      // Сохраняем статус в localStorage
+      localStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
+      
+      if (isAdmin) {
+        // Показываем админ-контент
+        const adminContent = document.getElementById('adminContent');
+        const accessDenied = document.getElementById('accessDenied');
+        
+        if (adminContent) adminContent.style.display = 'block';
+        if (accessDenied) accessDenied.style.display = 'none';
+        
+        // Загружаем данные
+        loadTeachers();
+      } else {
+        // Показываем сообщение о запрете доступа
+        const adminContent = document.getElementById('adminContent');
+        const accessDenied = document.getElementById('accessDenied');
+        
+        if (adminContent) adminContent.style.display = 'none';
+        if (accessDenied) accessDenied.style.display = 'block';
+        
+        // Скрываем админ-ссылку в навигации
+        if (typeof updateAdminMenuVisibility === 'function') {
+          updateAdminMenuVisibility();
+        }
+      }
+    } else {
+      // Документ не найден - перенаправляем на логин
+      window.location.href = './login.html';
+    }
+  } catch (error) {
+    console.error("Ошибка проверки прав:", error);
+    const adminContent = document.getElementById('adminContent');
+    const accessDenied = document.getElementById('accessDenied');
+    
+    if (adminContent) adminContent.style.display = 'none';
+    if (accessDenied) accessDenied.style.display = 'block';
+  }
+}
 
 function loadTeachers() {
   db.collection("teacher").orderBy("createdAt", "desc").onSnapshot(snap => {
@@ -44,9 +112,9 @@ function loadTeachers() {
         'Никогда';
         
       tr.innerHTML = `
-        <td>${teacher.name}</td>
-        <td>${teacher.surname}</td>
-        <td>${teacher.login}</td>
+        <td>${teacher.name || ''}</td>
+        <td>${teacher.surname || ''}</td>
+        <td>${teacher.login || ''}</td>
         <td>${lastLogin}</td>
       `;
       tbody.appendChild(tr);
@@ -78,5 +146,3 @@ function generateRandomCode(length) {
   }
   return result;
 }
-
-loadTeachers();

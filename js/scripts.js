@@ -17,9 +17,6 @@ try {
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-// ============================================
-// ФУНКЦИИ АВТОРИЗАЦИИ И АДМИН-МЕНЮ
-// ============================================
 
 function checkAuth() {
   const teacherId = localStorage.getItem('teacherId');
@@ -37,61 +34,11 @@ function logout() {
   localStorage.removeItem('teacherName');
   localStorage.removeItem('teacherSurname');
   localStorage.removeItem('teacherEmail');
-  localStorage.removeItem('isAdmin');
   localStorage.removeItem('currentGroupId');
   localStorage.removeItem('currentGroupName');
   localStorage.removeItem('currentCourseId');
   localStorage.removeItem('currentCourseName');
   window.location.href = './login.html';
-}
-
-// Функция для управления видимостью админ-меню
-function updateAdminMenuVisibility() {
-  const isAdmin = localStorage.getItem('isAdmin') === 'true';
-  
-  // Ищем все ссылки на админку
-  const adminLinks = document.querySelectorAll('.admin-link, a[href="./admin.html"]');
-  
-  console.log('updateAdminMenuVisibility вызван');
-  console.log('isAdmin:', isAdmin);
-  console.log('Найдено ссылок на админку:', adminLinks.length);
-  
-  adminLinks.forEach((link, index) => {
-    if (isAdmin) {
-      link.style.display = '';
-      link.style.visibility = '';
-      link.style.opacity = '1';
-      console.log(`Показана ссылка ${index}`);
-    } else {
-      link.style.display = 'none';
-      link.style.visibility = 'hidden';
-      link.style.opacity = '0';
-      console.log(`Скрыта ссылка ${index}`);
-    }
-  });
-  
-  return isAdmin;
-}
-
-// Функция для проверки и обновления статуса admin из Firestore
-async function refreshAdminStatus() {
-  const teacherId = localStorage.getItem('teacherId');
-  if (!teacherId) return false;
-  
-  try {
-    const teacherDoc = await db.collection('teacher').doc(teacherId).get();
-    if (teacherDoc.exists) {
-      const data = teacherDoc.data();
-      const isAdmin = data.admin === true;
-      localStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
-      console.log('Статус admin обновлен из Firestore:', isAdmin);
-      return isAdmin;
-    }
-    return false;
-  } catch (error) {
-    console.error('Ошибка проверки прав администратора:', error);
-    return false;
-  }
 }
 
 function formatDate(date) {
@@ -106,6 +53,7 @@ function formatDate(date) {
   }).format(date);
 }
 
+
 function generateRandomCode(length) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = '';
@@ -114,10 +62,6 @@ function generateRandomCode(length) {
   }
   return result;
 }
-
-// ============================================
-// ВХОД
-// ============================================
 
 function initLoginPage() {
   console.log('Инициализация страницы входа');
@@ -142,15 +86,12 @@ function initLoginPage() {
       .then((snapshot) => {
         if (!snapshot.empty) {
           const teacherData = snapshot.docs[0].data();
-          const isAdmin = teacherData.admin === true;
-          
           localStorage.setItem('teacherId', snapshot.docs[0].id);
-          localStorage.setItem('teacherName', teacherData.name || '');
-          localStorage.setItem('teacherSurname', teacherData.surname || '');
-          localStorage.setItem('teacherEmail', teacherData.login || '');
-          localStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
+          localStorage.setItem('teacherName', teacherData.name);
+          localStorage.setItem('teacherSurname', teacherData.surname);
+          localStorage.setItem('teacherEmail', teacherData.login);
           
-          console.log('Данные преподавателя сохранены, isAdmin:', isAdmin);
+          console.log('Данные преподавателя сохранены:', teacherData.name);
           
           db.collection('teacher').doc(snapshot.docs[0].id).update({
             last_login_time: firebase.firestore.FieldValue.serverTimestamp()
@@ -164,13 +105,7 @@ function initLoginPage() {
       })
       .catch((error) => {
         console.error("Ошибка входа:", error);
-        let errorMessage = 'Неверный email или пароль';
-        if (error.code === 'auth/user-not-found') {
-          errorMessage = 'Пользователь не найден';
-        } else if (error.code === 'auth/wrong-password') {
-          errorMessage = 'Неверный пароль';
-        }
-        messageDiv.innerHTML = `<div class="alert alert-danger">${errorMessage}</div>`;
+        messageDiv.innerHTML = '<div class="alert alert-danger">Неверный email или пароль</div>';
       });
   });
 
@@ -181,9 +116,6 @@ function initLoginPage() {
   });
 }
 
-// ============================================
-// РЕГИСТРАЦИЯ
-// ============================================
 
 function initRegisterPage() {
   console.log('Инициализация страницы регистрации');
@@ -223,15 +155,14 @@ function initRegisterPage() {
             return db.collection('teacher').doc(userId).set({
               name: name,
               surname: surname,
-              login: email,
-              role: "teacher",
-              admin: false,
+              login: email,  
+              role: "teacher",  
               createdAt: firebase.firestore.FieldValue.serverTimestamp(),
               last_login_time: firebase.firestore.FieldValue.serverTimestamp()
             }).then(() => {
               return db.collection('invite_codes').doc(codeDoc.id).update({
                 used: true,
-                usedBy: userId,
+                usedBy: userId,  
                 usedAt: firebase.firestore.FieldValue.serverTimestamp()
               }).then(() => {
                 return userCredential;
@@ -244,7 +175,6 @@ function initRegisterPage() {
         localStorage.setItem('teacherName', document.getElementById('name').value);
         localStorage.setItem('teacherSurname', document.getElementById('surname').value);
         localStorage.setItem('teacherEmail', document.getElementById('email').value);
-        localStorage.setItem('isAdmin', 'false');
         
         messageDiv.innerHTML = '<div class="alert alert-success">Регистрация успешна! Перенаправление...</div>';
         setTimeout(() => {
@@ -264,9 +194,6 @@ function initRegisterPage() {
   });
 }
 
-// ============================================
-// КУРСЫ
-// ============================================
 
 let activeCoursesListener = null;
 let completedCoursesListener = null;
@@ -281,9 +208,6 @@ function initCoursesPage() {
     const surname = localStorage.getItem('teacherSurname') || '';
     teacherNameEl.textContent = `${name} ${surname}`.trim();
   }
-  
-  // Обновляем видимость админ-меню
-  updateAdminMenuVisibility();
   
   loadActiveCourses();
   loadCompletedCourses();
@@ -512,9 +436,6 @@ function addCourse() {
   });
 }
 
-// ============================================
-// ГРУППЫ
-// ============================================
 
 function initGroupsPage() {
   console.log('Инициализация страницы групп');
@@ -526,9 +447,6 @@ function initGroupsPage() {
     const surname = localStorage.getItem('teacherSurname') || '';
     teacherNameEl.textContent = `${name} ${surname}`.trim();
   }
-  
-  // Обновляем видимость админ-меню
-  updateAdminMenuVisibility();
   
   loadGroups();
 }
@@ -627,9 +545,6 @@ function showGroupCourses(groupId, groupName) {
   window.location.href = './group-courses.html';
 }
 
-// ============================================
-// КУРСЫ ГРУППЫ
-// ============================================
 
 function initGroupCoursesPage() {
   console.log('Инициализация страницы курсов группы');
@@ -764,9 +679,6 @@ function showCoursePerformance(courseId, courseName) {
   window.location.href = './course-performance.html';
 }
 
-// ============================================
-// УСПЕВАЕМОСТЬ КУРСА
-// ============================================
 
 let currentGroupId = null;
 let currentGroupName = null;
@@ -777,6 +689,7 @@ let allStudents = [];
 let testPartsMap = new Map();
 let resetData = {};
 let courseGrades = null;
+
 
 async function loadCourseGrades() {
   try {
@@ -794,6 +707,7 @@ async function loadCourseGrades() {
   }
 }
 
+
 async function getStudentTotalScore(studentId) {
   try {
     const docId = `${studentId}_${currentCourseId}`;
@@ -808,6 +722,7 @@ async function getStudentTotalScore(studentId) {
     return 0;
   }
 }
+
 
 function getGradeFromTotalScore(totalScore) {
   if (!courseGrades) {
@@ -828,6 +743,7 @@ function getGradeFromTotalScore(totalScore) {
     return { text: 'неуд', class: 'bg-unsatisfactory' };
   }
 }
+
 
 function initCoursePerformancePage() {
   console.log('Инициализация страницы успеваемости');
@@ -972,6 +888,8 @@ async function loadPerformanceData() {
   }
 }
 
+
+
 async function loadDeadlinesForGroup(groupId) {
   const deadlinesMap = new Map();
   try {
@@ -1078,6 +996,7 @@ function roundScore(score) {
   if (isNaN(num)) return score;
   return num.toFixed(2);
 }
+
 
 function buildPerformanceTable(students, tests, gradesMap, deadlinesMap) {
   const header = document.getElementById('performanceTableHeader');
@@ -1426,7 +1345,6 @@ async function handleDeadlineSubmit(e) {
     submitBtn.disabled = false;
   }
 }
-
 async function handleTransferSubmit(e) {
   e.preventDefault();
   
@@ -1512,9 +1430,6 @@ async function transferStudent(studentId, newGroupId) {
   return true;
 }
 
-// ============================================
-// ГЛАВНЫЙ ОБРАБОТЧИК
-// ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
   console.log('DOM загружен');
@@ -1533,11 +1448,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const surname = localStorage.getItem('teacherSurname') || '';
     teacherNameEl.textContent = `${name} ${surname}`.trim();
   }
-  
-  // Обновляем статус admin из Firestore и управляем видимостью
-  refreshAdminStatus().then(() => {
-    updateAdminMenuVisibility();
-  });
   
   switch(filename) {
     case 'login.html':
