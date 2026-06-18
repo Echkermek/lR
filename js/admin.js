@@ -9,11 +9,57 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const auth = firebase.auth();
 
-// Проверяем авторизацию
-if (!localStorage.getItem('teacherId')) {
-  window.location.href = './login.html';
+// Проверка прав администратора
+async function checkAdminAccess() {
+  const teacherId = localStorage.getItem('teacherId');
+  console.log('teacherId:', teacherId); // Отладка
+  
+  if (!teacherId) {
+    console.log('Нет teacherId, перенаправление на login');
+    window.location.href = './login.html';
+    return false;
+  }
+
+  try {
+    const docRef = db.collection("teacher").doc(teacherId);
+    const doc = await docRef.get();
+    
+    console.log('Документ существует?', doc.exists); // Отладка
+    
+    if (!doc.exists) {
+      console.log('Документ не найден, перенаправление на login');
+      window.location.href = './login.html';
+      return false;
+    }
+
+    const teacherData = doc.data();
+    console.log('Данные преподавателя:', teacherData); // Отладка
+    
+    // Проверяем наличие поля admin
+    const isAdmin = teacherData.admin === true;
+    console.log('isAdmin:', isAdmin); // Отладка
+    console.log('Тип admin:', typeof teacherData.admin); // Отладка
+    
+    if (!isAdmin) {
+      console.log('Не админ, перенаправление на courses');
+      window.location.href = './courses.html';
+      return false;
+    }
+
+    // Сохраняем данные преподавателя
+    localStorage.setItem('teacherName', teacherData.name || '');
+    localStorage.setItem('teacherSurname', teacherData.surname || '');
+    localStorage.setItem('teacherEmail', teacherData.login || '');
+    
+    console.log('Доступ разрешен! Показываем админ-панель');
+    return true;
+    
+  } catch (error) {
+    console.error('Ошибка проверки прав:', error);
+    window.location.href = './login.html';
+    return false;
+  }
 }
 
 function logout() {
@@ -21,75 +67,16 @@ function logout() {
   localStorage.removeItem('teacherName');
   localStorage.removeItem('teacherSurname');
   localStorage.removeItem('teacherEmail');
-  localStorage.removeItem('isAdmin');
   window.location.href = './login.html';
 }
 
-// Отображаем имя преподавателя
-document.addEventListener('DOMContentLoaded', function() {
-  const teacherNameEl = document.getElementById('teacherName');
-  if (teacherNameEl) {
+// Отображение имени преподавателя
+function displayTeacherName() {
+  const nameElement = document.getElementById('teacherName');
+  if (nameElement) {
     const name = localStorage.getItem('teacherName') || '';
     const surname = localStorage.getItem('teacherSurname') || '';
-    teacherNameEl.textContent = `${name} ${surname}`.trim();
-  }
-  
-  // Проверяем права администратора
-  checkAdminAccess();
-});
-
-// Функция проверки прав администратора
-async function checkAdminAccess() {
-  const teacherId = localStorage.getItem('teacherId');
-  if (!teacherId) {
-    window.location.href = './login.html';
-    return;
-  }
-
-  try {
-    const teacherDoc = await db.collection('teacher').doc(teacherId).get();
-    
-    if (teacherDoc.exists) {
-      const data = teacherDoc.data();
-      const isAdmin = data.admin === true;
-      
-      // Сохраняем статус в localStorage
-      localStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
-      
-      if (isAdmin) {
-        // Показываем админ-контент
-        const adminContent = document.getElementById('adminContent');
-        const accessDenied = document.getElementById('accessDenied');
-        
-        if (adminContent) adminContent.style.display = 'block';
-        if (accessDenied) accessDenied.style.display = 'none';
-        
-        // Загружаем данные
-        loadTeachers();
-      } else {
-        // Показываем сообщение о запрете доступа
-        const adminContent = document.getElementById('adminContent');
-        const accessDenied = document.getElementById('accessDenied');
-        
-        if (adminContent) adminContent.style.display = 'none';
-        if (accessDenied) accessDenied.style.display = 'block';
-        
-        // Скрываем админ-ссылку в навигации
-        if (typeof updateAdminMenuVisibility === 'function') {
-          updateAdminMenuVisibility();
-        }
-      }
-    } else {
-      // Документ не найден - перенаправляем на логин
-      window.location.href = './login.html';
-    }
-  } catch (error) {
-    console.error("Ошибка проверки прав:", error);
-    const adminContent = document.getElementById('adminContent');
-    const accessDenied = document.getElementById('accessDenied');
-    
-    if (adminContent) adminContent.style.display = 'none';
-    if (accessDenied) accessDenied.style.display = 'block';
+    nameElement.textContent = `${name} ${surname}`.trim();
   }
 }
 
@@ -99,7 +86,7 @@ function loadTeachers() {
     tbody.innerHTML = "";
     
     if (snap.empty) {
-      tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Нет преподавателей</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Нет преподавателей</td></tr>`;
       return;
     }
     
@@ -111,11 +98,17 @@ function loadTeachers() {
         new Date(teacher.last_login_time.toDate()).toLocaleString('ru-RU') : 
         'Никогда';
         
+      // Добавляем индикатор администратора
+      const adminBadge = teacher.admin === true ? 
+        '<span class="badge badge-success">Админ</span>' : 
+        '<span class="badge badge-secondary">Преподаватель</span>';
+        
       tr.innerHTML = `
         <td>${teacher.name || ''}</td>
         <td>${teacher.surname || ''}</td>
         <td>${teacher.login || ''}</td>
         <td>${lastLogin}</td>
+        <td>${adminBadge}</td>
       `;
       tbody.appendChild(tr);
     });
@@ -146,3 +139,31 @@ function generateRandomCode(length) {
   }
   return result;
 }
+
+async function init() {
+  console.log('Инициализация админ-панели...');
+  
+  const hasAccess = await checkAdminAccess();
+  console.log('hasAccess:', hasAccess);
+  
+  if (!hasAccess) {
+    console.log('Нет доступа, показываем сообщение об ошибке');
+    // Показываем сообщение о запрете доступа
+    document.getElementById('accessDenied').style.display = 'block';
+    document.getElementById('adminContent').style.display = 'none';
+    return;
+  }
+  
+  // Если есть доступ, показываем контент
+  console.log('Доступ есть, показываем админ-панель');
+  document.getElementById('adminContent').style.display = 'block';
+  document.getElementById('accessDenied').style.display = 'none';
+  
+  // Отображаем имя
+  displayTeacherName();
+  
+  // Загружаем список преподавателей
+  loadTeachers();
+}
+
+init();

@@ -9,15 +9,15 @@
 </head>
 <body>
   <nav class="navbar navbar-expand-md navbar-light bg-light fixed-top">
-    <a class="navbar-brand font-weight-bold" href="./courses.html">Learn Remote</a>
+    <a class="navbar-brand font-weight-bold" href="./courses.html">Мир на ладони</a>
     <div class="navbar-nav mr-auto">
       <a class="nav-link" href="./courses.html">Курсы</a>
       <a class="nav-link" href="./groups.html">Группы</a>
       <a class="nav-link" href="./notifications.html">Уведомления</a>
       <a class="nav-link" href="./material.html">Материалы</a>
-      <a class="nav-link" href="./debtors.html">Должники</a>  
+      <a class="nav-link" href="./debtors.html">Должники</a>
       <a class="nav-link" href="./manual-answers.html">Проверка ответов</a>
-      <a class="nav-link admin-link" href="./admin.html">Админ</a>
+      <a class="nav-link active" href="./admin.html">Админ</a>
     </div>
     <div class="navbar-text mr-3">
       <strong id="teacherName"></strong>
@@ -25,62 +25,53 @@
     <a class="nav-link text-danger font-weight-bold" href="#" onclick="logout()">Выход</a>
   </nav>
 
-  <div class="container">
-    <!-- Блок для администраторов -->
-    <div id="adminContent">
-      <h2 class="mb-4">Панель администратора</h2>
+  <!-- Контент, который будет виден только админам -->
+  <div id="adminContent" class="container" style="display: none;">
+    <h2 class="mb-4">Панель администратора</h2>
 
-      <div class="card mb-4">
-        <div class="card-header bg-info text-white">
-          <h5 class="mb-0">Сгенерировать код приглашения</h5>
-        </div>
-        <div class="card-body">
-          <button class="btn btn-primary" onclick="generateInviteCode()">Сгенерировать код приглашения</button>
-          <div id="codeMessage" class="mt-2"></div>
-        </div>
+    <div class="card mb-4">
+      <div class="card-header bg-info text-white">
+        <h5 class="mb-0">Сгенерировать код приглашения</h5>
       </div>
-
-      <div class="card">
-        <div class="card-header bg-info text-white">
-          <h5 class="mb-0">Список преподавателей</h5>
-        </div>
-        <div class="card-body p-0">
-          <table class="table table-hover mb-0">
-            <thead class="thead-light">
-              <tr>
-                <th>Имя</th>
-                <th>Фамилия</th>
-                <th>Email</th>
-                <th>Дата последнего входа</th>
-              </tr>
-            </thead>
-            <tbody id="teachersList">
-            </tbody>
-          </table>
-        </div>
+      <div class="card-body">
+        <button class="btn btn-primary" onclick="generateInviteCode()">Сгенерировать код приглашения</button>
+        <div id="codeMessage" class="mt-2"></div>
       </div>
     </div>
 
-    <!-- Блок для не-администраторов -->
-    <div id="accessDenied" style="display: none;">
-      <div class="card mt-5">
-        <div class="card-header bg-danger text-white">
-          <h4 class="mb-0">⛔ Доступ запрещен</h4>
-        </div>
-        <div class="card-body text-center py-5">
-          <div style="font-size: 64px; margin-bottom: 20px;">🚫</div>
-          <h3 class="text-danger">У вас нет прав администратора</h3>
-          <p class="text-muted mt-3">Эта страница доступна только пользователям с правами администратора.</p>
-          <a href="./courses.html" class="btn btn-primary mt-3">Вернуться на главную</a>
-        </div>
+    <div class="card">
+      <div class="card-header bg-info text-white">
+        <h5 class="mb-0">Список преподавателей</h5>
       </div>
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+          <thead class="thead-light">
+            <tr>
+              <th>Имя</th>
+              <th>Фамилия</th>
+              <th>Email</th>
+              <th>Дата последнего входа</th>
+              <th>Статус</th>
+            </tr>
+          </thead>
+          <tbody id="teachersList">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Сообщение для не-админов -->
+  <div id="accessDenied" class="container text-center mt-5" style="display: none;">
+    <div class="alert alert-danger">
+      <h4>Доступ запрещен</h4>
+      <p>У вас нет прав администратора для просмотра этой страницы.</p>
+      <a href="./courses.html" class="btn btn-primary mt-3">Вернуться на главную</a>
     </div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="./js/scripts.js"></script>
   <script src="./js/admin.js"></script>
 </body>
 </html>
