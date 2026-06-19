@@ -6,6 +6,49 @@
   <title>Мир на ладони - Вход</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
   <link rel="stylesheet" href="./css/style.css">
+  <style>
+    /* Дополнительные стили для позиционирования иконки глаза */
+    .password-toggle {
+      position: relative;
+    }
+    .password-toggle .toggle-eye {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: #6c757d;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 1.1rem;
+      padding: 0;
+      line-height: 1;
+      z-index: 5;
+    }
+    .password-toggle .toggle-eye:hover {
+      color: #343a40;
+    }
+    /* Чтобы инпут не перекрывался иконкой */
+    .password-toggle .form-control {
+      padding-right: 40px;
+    }
+    /* Центрирование контейнеров */
+    .login-container, .register-container {
+      max-width: 420px;
+      margin: 80px auto 40px;
+      padding: 30px 25px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+    body {
+      background: #f8f9fc;
+    }
+    .navbar-brand {
+      font-size: 1.4rem;
+    }
+  </style>
 </head>
 <body>
   <nav class="navbar navbar-expand-md navbar-light bg-light fixed-top">
@@ -20,8 +63,11 @@
         <div class="form-group">
           <input type="email" class="form-control" id="email" placeholder="Email" required>
         </div>
-        <div class="form-group">
+        <div class="form-group password-toggle">
           <input type="password" class="form-control" id="password" placeholder="Пароль" required>
+          <button type="button" class="toggle-eye" id="toggleLoginPassword" aria-label="Показать пароль">
+            <i class="fa-regular fa-eye" id="loginEyeIcon"></i>
+          </button>
         </div>
         <button type="submit" class="btn btn-primary btn-block">Войти</button>
       </form>
@@ -34,9 +80,33 @@
     </div>
   </div>
 
+  <!-- Подключаем Font Awesome для иконок глаза -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="./js/scripts.js"></script>
+  <script>
+    // ----- Логика для переключения видимости пароля (ВХОД) -----
+    (function() {
+      const loginPasswordInput = document.getElementById('password');
+      const loginToggleBtn = document.getElementById('toggleLoginPassword');
+      const loginEyeIcon = document.getElementById('loginEyeIcon');
+
+      if (loginToggleBtn && loginPasswordInput && loginEyeIcon) {
+        loginToggleBtn.addEventListener('click', function(e) {
+          e.preventDefault(); // предотвращаем любые нежелательные действия
+          const type = loginPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+          loginPasswordInput.setAttribute('type', type);
+          // меняем иконку
+          if (type === 'text') {
+            loginEyeIcon.className = 'fa-regular fa-eye-slash';
+          } else {
+            loginEyeIcon.className = 'fa-regular fa-eye';
+          }
+        });
+      }
+    })();
+  </script>
 </body>
 </html>
